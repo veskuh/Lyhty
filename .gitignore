@@ -1,0 +1,12 @@
+*.iml
+.gradle
+/build
+/app/build
+/apk
+*.apk
+local.properties
+.DS_Store
+.kotlin
+/Logs
+.idea/
+.system_generated/

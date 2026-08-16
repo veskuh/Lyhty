@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">Lyhty</string>
+    <string name="title_feeds_categories">Feeds &amp; Categories</string>
+    <string name="action_sync">Sync</string>
+    <string name="action_server_settings">Server Settings</string>
+    <string name="action_fetch_full_text">Fetch Full Text</string>
+    <string name="action_mark_read">Mark Read</string>
+    <string name="action_mark_unread">Mark Unread</string>
+    <string name="action_open_browser">Open Browser</string>
+    <string name="action_prev">Prev</string>
+    <string name="action_next">Next</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_share_logs">Share Diagnostic Logs</string>
+    <string name="action_save_connect">Save &amp; Connect</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="dialog_title_settings">Settings &amp; Diagnostics</string>
+    <string name="label_server_url">Server URL</string>
+    <string name="label_api_key">API Key / Token</string>
+    <string name="label_log_level">Diagnostic Log Level</string>
+    <string name="filter_unread">Unread</string>
+    <string name="filter_all">All</string>
+    <string name="search_placeholder">Search articles...</string>
+    <string name="empty_articles">No articles match criteria.</string>
+    <string name="select_article_prompt">Select an article to read</string>
+</resources>
