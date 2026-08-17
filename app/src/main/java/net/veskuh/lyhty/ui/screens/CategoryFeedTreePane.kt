@@ -54,7 +54,7 @@ fun CategoryFeedTreePane(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
             // Header with Settings and Sync Buttons
             Row(

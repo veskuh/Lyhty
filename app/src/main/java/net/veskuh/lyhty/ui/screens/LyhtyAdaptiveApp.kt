@@ -205,7 +205,7 @@ fun LyhtyAdaptiveApp(
                             },
                             onSync = { viewModel.refreshAll() },
                             onOpenSettings = { showSettingsDialog = true },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(0.75f)
                         )
                         EntryListPane(
                             entries = uiState.entries,
@@ -218,7 +218,7 @@ fun LyhtyAdaptiveApp(
                             },
                             onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
                             onSearchQueryChange = { query -> viewModel.setSearchQuery(query) },
-                            modifier = Modifier.weight(1.2f)
+                            modifier = Modifier.weight(1.45f)
                         )
                     }
                 }
