@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+import net.veskuh.lyhty.ui.state.ReaderTheme
 import net.veskuh.lyhty.util.LogLevel
 import net.veskuh.lyhty.util.LyhtyLogger
 
@@ -35,7 +36,13 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
         MinifluxConfig(
             serverUrl = prefs.getString("KEY_SERVER_URL", "") ?: "",
             apiKey = prefs.getString("KEY_API_KEY", "") ?: "",
-            logLevel = LogLevel.fromName(prefs.getString("KEY_LOG_LEVEL", "DEBUG") ?: "DEBUG")
+            logLevel = LogLevel.fromName(prefs.getString("KEY_LOG_LEVEL", "DEBUG") ?: "DEBUG"),
+            readerTheme = try {
+                ReaderTheme.valueOf(prefs.getString("KEY_READER_THEME", "OLED_DARK") ?: "OLED_DARK")
+            } catch (_: Exception) {
+                ReaderTheme.OLED_DARK
+            },
+            fontSizeScale = prefs.getFloat("KEY_FONT_SIZE_SCALE", 1.0f)
         )
     )
 
@@ -63,6 +70,22 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
         _config.value = _config.value.copy(logLevel = logLevel)
     }
 
+    override suspend fun saveReaderTheme(readerTheme: ReaderTheme) {
+        prefs.edit()
+            .putString("KEY_READER_THEME", readerTheme.name)
+            .commit()
+
+        _config.value = _config.value.copy(readerTheme = readerTheme)
+    }
+
+    override suspend fun saveFontSizeScale(fontSizeScale: Float) {
+        prefs.edit()
+            .putFloat("KEY_FONT_SIZE_SCALE", fontSizeScale)
+            .commit()
+
+        _config.value = _config.value.copy(fontSizeScale = fontSizeScale)
+    }
+
     override fun getServerUrlSync(): String = (prefs.getString("KEY_SERVER_URL", "") ?: "").trim()
 
     override fun getApiKeySync(): String {
@@ -74,6 +97,18 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
     override fun getLogLevelSync(): LogLevel = LogLevel.fromName(
         prefs.getString("KEY_LOG_LEVEL", "DEBUG") ?: "DEBUG"
     )
+
+    override fun getReaderThemeSync(): ReaderTheme {
+        return try {
+            ReaderTheme.valueOf(prefs.getString("KEY_READER_THEME", "OLED_DARK") ?: "OLED_DARK")
+        } catch (_: Exception) {
+            ReaderTheme.OLED_DARK
+        }
+    }
+
+    override fun getFontSizeScaleSync(): Float {
+        return prefs.getFloat("KEY_FONT_SIZE_SCALE", 1.0f)
+    }
 
     companion object {
         private fun createEncryptedPrefs(context: Context): SharedPreferences {

@@ -51,8 +51,8 @@ class EntryReaderControlsTest {
                 onFetchFullText = {},
                 onMarkRead = {},
                 onMarkUnread = { markUnreadClicked = true },
-                onPreviousEntry = { prevClicked = true },
-                onNextEntry = { nextClicked = true }
+                onPreviousEntry = { prevClicked = true; true },
+                onNextEntry = { nextClicked = true; true }
             )
         }
 

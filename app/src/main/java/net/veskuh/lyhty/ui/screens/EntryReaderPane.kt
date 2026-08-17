@@ -48,6 +48,18 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.remember
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
+
 @Composable
 fun EntryReaderPane(
     entry: EntryEntity?,
@@ -57,8 +69,9 @@ fun EntryReaderPane(
     onFetchFullText: (Long) -> Unit,
     onMarkRead: (Long) -> Unit,
     onMarkUnread: (Long) -> Unit,
-    onNextEntry: (() -> Unit)? = null,
-    onPreviousEntry: (() -> Unit)? = null,
+    onNextEntry: (() -> Boolean)? = null,
+    onPreviousEntry: (() -> Boolean)? = null,
+    onAdvanceToNextFeed: (() -> String?)? = null,
     onSetTheme: ((ReaderTheme) -> Unit)? = null,
     onSetFontSizeScale: ((Float) -> Unit)? = null,
     onBack: (() -> Unit)? = null,
@@ -81,8 +94,52 @@ fun EntryReaderPane(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
-        } else {
-            val isFlexMode = postureInfo.posture == DevicePosture.FLEX_TABLETOP
+            return@Surface
+        }
+
+        val isFlexMode = postureInfo.posture == DevicePosture.FLEX_TABLETOP
+
+            var totalDragX by remember { mutableFloatStateOf(0f) }
+            var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
+
+            val gestureModifier = Modifier.pointerInput(entry.id) {
+                detectHorizontalDragGestures(
+                    onDragStart = { totalDragX = 0f },
+                    onDragEnd = {
+                        val thresholdPx = 60.dp.toPx()
+                        if (totalDragX < -thresholdPx) {
+                            // Swiped Left -> Next Article
+                            val moved = onNextEntry?.invoke() ?: false
+                            if (!moved) {
+                                if (!isAtEndSignaled) {
+                                    isAtEndSignaled = true
+                                    Toast.makeText(
+                                        context,
+                                        "End of current list. Swipe again to jump to next unread feed.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    val nextFeedTitle = onAdvanceToNextFeed?.invoke()
+                                    if (nextFeedTitle != null) {
+                                        Toast.makeText(context, "Switched to $nextFeedTitle", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        } else if (totalDragX > thresholdPx) {
+                            // Swiped Right -> Previous Article
+                            val moved = onPreviousEntry?.invoke() ?: false
+                            if (!moved) {
+                                Toast.makeText(context, "First article in current list", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        totalDragX += dragAmount
+                    }
+                )
+            }
 
             if (isFlexMode) {
                 // Tabletop Flex Mode split (Top: Content, Bottom: Miniflux Desk)
@@ -93,8 +150,17 @@ fun EntryReaderPane(
                             .weight(1f)
                             .fillMaxWidth()
                             .padding(bottom = postureInfo.hingeBoundsDp.dp)
+                            .then(gestureModifier)
                     ) {
-                        ReaderContent(entry = entry, fontSizeScale = fontSizeScale)
+                        AnimatedContent(
+                            targetState = entry,
+                            transitionSpec = {
+                                (slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width })
+                            },
+                            label = "ReaderContentFlexTransition"
+                        ) { currentEntry ->
+                            ReaderContent(entry = currentEntry, fontSizeScale = fontSizeScale)
+                        }
                     }
 
                     // Bottom Half Display (Miniflux Action Desk)
@@ -120,8 +186,8 @@ fun EntryReaderPane(
                                 onFetchFullText = onFetchFullText,
                                 onMarkRead = onMarkRead,
                                 onMarkUnread = onMarkUnread,
-                                onNextEntry = onNextEntry,
-                                onPreviousEntry = onPreviousEntry,
+                                onNextEntry = { onNextEntry?.invoke() },
+                                onPreviousEntry = { onPreviousEntry?.invoke() },
                                 onBack = onBack,
                                 onOpenBrowser = {
                                     if (entry.url.isNotBlank()) {
@@ -146,8 +212,8 @@ fun EntryReaderPane(
                         onFetchFullText = onFetchFullText,
                         onMarkRead = onMarkRead,
                         onMarkUnread = onMarkUnread,
-                        onNextEntry = onNextEntry,
-                        onPreviousEntry = onPreviousEntry,
+                        onNextEntry = { onNextEntry?.invoke() },
+                        onPreviousEntry = { onPreviousEntry?.invoke() },
                         onBack = onBack,
                         onOpenBrowser = {
                             if (entry.url.isNotBlank()) {
@@ -159,12 +225,26 @@ fun EntryReaderPane(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    ReaderContent(entry = entry, fontSizeScale = fontSizeScale)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .then(gestureModifier)
+                    ) {
+                        AnimatedContent(
+                            targetState = entry,
+                            transitionSpec = {
+                                (slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width })
+                            },
+                            label = "ReaderContentFlatTransition"
+                        ) { currentEntry ->
+                            ReaderContent(entry = currentEntry, fontSizeScale = fontSizeScale)
+                        }
+                    }
                 }
             }
         }
     }
-}
 
 @Composable
 private fun ReaderContent(

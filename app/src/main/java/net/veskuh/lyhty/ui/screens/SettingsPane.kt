@@ -61,6 +61,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import net.veskuh.lyhty.ui.state.ReaderTheme
 import net.veskuh.lyhty.util.LogLevel
 import net.veskuh.lyhty.util.LyhtyLogger
@@ -73,6 +77,8 @@ fun SettingsPane(
     currentLogLevel: LogLevel,
     fontSizeScale: Float,
     readerTheme: ReaderTheme,
+    isLoading: Boolean = false,
+    hasError: Boolean = false,
     onSaveConfig: (String, String) -> Unit,
     onSaveLogLevel: (LogLevel) -> Unit,
     onSetTheme: (ReaderTheme) -> Unit,
@@ -83,13 +89,31 @@ fun SettingsPane(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
-    var serverUrl by remember { mutableStateOf(initialServerUrl) }
-    var apiKey by remember { mutableStateOf(initialApiKey) }
+    var serverUrl by remember(initialServerUrl) { mutableStateOf(initialServerUrl) }
+    var apiKey by remember(initialApiKey) { mutableStateOf(initialApiKey) }
     var isApiKeyVisible by remember { mutableStateOf(false) }
+
+    var urlValidationError by remember { mutableStateOf<String?>(null) }
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var isSavingServerConfig by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLoading, hasError) {
+        if (isSavingServerConfig && !isLoading) {
+            isSavingServerConfig = false
+            if (!hasError) {
+                android.widget.Toast.makeText(
+                    context,
+                    "Miniflux server connection updated successfully!",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                onBack()
+            }
+        }
+    }
 
     var localFontSize by remember(fontSizeScale) { mutableFloatStateOf(fontSizeScale) }
 
-    var selectedLogLevel by remember { mutableStateOf(currentLogLevel) }
+    var selectedLogLevel by remember(currentLogLevel) { mutableStateOf(currentLogLevel) }
     var isLogLevelDropdownExpanded by remember { mutableStateOf(false) }
     val logLevels = LogLevel.entries
 
@@ -206,14 +230,16 @@ fun SettingsPane(
                                 value = localFontSize,
                                 onValueChange = { scale ->
                                     localFontSize = scale
-                                    onSetFontSizeScale(scale)
+                                },
+                                onValueChangeFinished = {
+                                    onSetFontSizeScale(localFontSize)
                                 },
                                 valueRange = 0.8f..1.8f,
                                 steps = 10,
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            // Live Preview Box
+                            // Live Preview Box matching ReaderContent base (16sp / 24sp)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -223,9 +249,9 @@ fun SettingsPane(
                             ) {
                                 Text(
                                     text = "Preview: Typography line height and text scaling for comfortable reading on foldable screens.",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = (14 * localFontSize).sp,
-                                        lineHeight = (20 * localFontSize).sp
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = (16 * localFontSize).sp,
+                                        lineHeight = (24 * localFontSize).sp
                                     )
                                 )
                             }
@@ -250,18 +276,34 @@ fun SettingsPane(
                         Column(modifier = Modifier.padding(16.dp)) {
                             OutlinedTextField(
                                 value = serverUrl,
-                                onValueChange = { serverUrl = it },
+                                onValueChange = {
+                                    serverUrl = it
+                                    urlValidationError = null
+                                },
                                 label = { Text("Server URL") },
                                 leadingIcon = { Icon(Icons.Default.Public, contentDescription = null) },
+                                isError = urlValidationError != null,
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
+
+                            if (urlValidationError != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = urlValidationError ?: "",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(12.dp))
 
                             OutlinedTextField(
                                 value = apiKey,
-                                onValueChange = { apiKey = it },
+                                onValueChange = {
+                                    apiKey = it
+                                    urlValidationError = null
+                                },
                                 label = { Text("API Key") },
                                 leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
                                 trailingIcon = {
@@ -280,14 +322,62 @@ fun SettingsPane(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Button(
-                                onClick = { onSaveConfig(serverUrl.trim(), apiKey.trim()) },
+                                onClick = {
+                                    val trimmedUrl = serverUrl.trim()
+                                    val trimmedKey = apiKey.trim()
+                                    if (trimmedUrl.isBlank() || (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://"))) {
+                                        urlValidationError = "Server URL must start with http:// or https://"
+                                    } else if (trimmedKey.isBlank()) {
+                                        urlValidationError = "API Key cannot be empty"
+                                    } else {
+                                        urlValidationError = null
+                                        showConfirmationDialog = true
+                                    }
+                                },
+                                enabled = !isLoading,
                                 modifier = Modifier.align(Alignment.End)
                             ) {
-                                Icon(Icons.Default.Check, contentDescription = null)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Save Connection")
+                                if (isSavingServerConfig && isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Connecting...")
+                                } else {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Save Connection")
+                                }
                             }
                         }
+                    }
+
+                    if (showConfirmationDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showConfirmationDialog = false },
+                            title = { Text("Reconfigure Server Connection?") },
+                            text = {
+                                Text("Updating your server credentials will clear existing cached articles and sync fresh categories and feeds from your Miniflux server.")
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        showConfirmationDialog = false
+                                        isSavingServerConfig = true
+                                        onSaveConfig(serverUrl.trim(), apiKey.trim())
+                                    }
+                                ) {
+                                    Text("Save & Sync")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showConfirmationDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -364,12 +454,18 @@ fun SettingsPane(
                                             context.startActivity(Intent.createChooser(intent, "Share Lyhty Diagnostic Logs"))
                                         } catch (_: Exception) {
                                             val text = LyhtyLogger.readLogContent()
-                                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(Intent.EXTRA_TEXT, text)
+                                            if (text.isNotBlank()) {
+                                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(Intent.EXTRA_TEXT, text)
+                                                }
+                                                context.startActivity(Intent.createChooser(intent, "Share Lyhty Diagnostic Logs"))
+                                            } else {
+                                                android.widget.Toast.makeText(context, "No diagnostic log file available yet.", android.widget.Toast.LENGTH_SHORT).show()
                                             }
-                                            context.startActivity(Intent.createChooser(intent, "Share Lyhty Diagnostic Logs"))
                                         }
+                                    } else {
+                                        android.widget.Toast.makeText(context, "No diagnostic log file available yet.", android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()

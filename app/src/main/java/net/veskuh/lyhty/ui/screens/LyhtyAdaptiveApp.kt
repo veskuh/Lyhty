@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,7 +55,7 @@ fun LyhtyAdaptiveApp(
     val postureInfo = rememberPostureInfo(foldingFeature = foldingFeature)
     val navigator = rememberListDetailPaneScaffoldNavigator<Long>()
 
-    var isSettingsOpen by remember { mutableStateOf(false) }
+    var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -178,6 +179,8 @@ fun LyhtyAdaptiveApp(
                                 currentLogLevel = viewModel.getLogLevel(),
                                 fontSizeScale = uiState.fontSizeScale,
                                 readerTheme = uiState.readerTheme,
+                                isLoading = uiState.isLoading,
+                                hasError = uiState.currentError != null,
                                 onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
                                 onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
                                 onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
@@ -195,6 +198,7 @@ fun LyhtyAdaptiveApp(
                                 onMarkUnread = { id -> viewModel.markAsUnread(id) },
                                 onNextEntry = { viewModel.selectNextEntry() },
                                 onPreviousEntry = { viewModel.selectPreviousEntry() },
+                                onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },
                                 onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
                                 onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
                                 onBack = { viewModel.selectEntry(null) }
@@ -223,6 +227,8 @@ fun LyhtyAdaptiveApp(
                         currentLogLevel = viewModel.getLogLevel(),
                         fontSizeScale = uiState.fontSizeScale,
                         readerTheme = uiState.readerTheme,
+                        isLoading = uiState.isLoading,
+                        hasError = uiState.currentError != null,
                         onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
                         onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
                         onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
@@ -269,6 +275,7 @@ fun LyhtyAdaptiveApp(
                                         onMarkUnread = { id -> viewModel.markAsUnread(id) },
                                         onNextEntry = { viewModel.selectNextEntry() },
                                         onPreviousEntry = { viewModel.selectPreviousEntry() },
+                                        onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },
                                         onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
                                         onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
                                         onBack = { viewModel.selectEntry(null) }

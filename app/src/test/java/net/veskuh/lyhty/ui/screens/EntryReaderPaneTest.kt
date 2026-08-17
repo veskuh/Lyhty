@@ -48,8 +48,8 @@ class EntryReaderPaneTest {
                 onFetchFullText = { fetchFullTextTapped = true },
                 onMarkRead = { markReadTapped = true },
                 onMarkUnread = {},
-                onNextEntry = { nextTapped = true },
-                onPreviousEntry = {}
+                onNextEntry = { nextTapped = true; true },
+                onPreviousEntry = { true }
             )
         }
 

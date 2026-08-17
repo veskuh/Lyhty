@@ -82,8 +82,8 @@ class MinifluxMainViewModel @Inject constructor(
     private val _selectedFeedId = MutableStateFlow<Long?>(null)
     private val _selectedEntryId = MutableStateFlow<Long?>(null)
     private val _searchQuery = MutableStateFlow("")
-    private val _readerTheme = MutableStateFlow(ReaderTheme.OLED_DARK)
-    private val _fontSizeScale = MutableStateFlow(1.0f)
+    private val _readerTheme = MutableStateFlow(configRepository?.getReaderThemeSync() ?: ReaderTheme.OLED_DARK)
+    private val _fontSizeScale = MutableStateFlow(configRepository?.getFontSizeScaleSync() ?: 1.0f)
     private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
     private val _currentError = MutableStateFlow<net.veskuh.lyhty.util.LyhtyError?>(null)
@@ -249,21 +249,52 @@ class MinifluxMainViewModel @Inject constructor(
         _selectedEntryId.value = entryId
     }
 
-    fun selectNextEntry() {
+    fun selectNextEntry(): Boolean {
         val currentEntries = uiState.value.entries
-        val currentId = _selectedEntryId.value ?: return
+        val currentId = _selectedEntryId.value ?: return false
         val index = currentEntries.indexOfFirst { it.id == currentId }
         if (index != -1 && index + 1 < currentEntries.size) {
             selectEntry(currentEntries[index + 1].id)
+            return true
         }
+        return false
     }
 
-    fun selectPreviousEntry() {
+    fun selectPreviousEntry(): Boolean {
         val currentEntries = uiState.value.entries
-        val currentId = _selectedEntryId.value ?: return
+        val currentId = _selectedEntryId.value ?: return false
         val index = currentEntries.indexOfFirst { it.id == currentId }
         if (index > 0) {
             selectEntry(currentEntries[index - 1].id)
+            return true
+        }
+        return false
+    }
+
+    fun advanceToNextUnreadFeed(): String? {
+        val state = uiState.value
+        val allFeeds = state.feeds
+        if (allFeeds.isEmpty()) return null
+
+        val currentFeedId = state.selectedFeed?.id
+        val currentFeedIdx = if (currentFeedId != null) allFeeds.indexOfFirst { it.id == currentFeedId } else -1
+
+        // Search sequentially starting after current feed
+        val candidateFeeds = if (currentFeedIdx != -1) {
+            allFeeds.drop(currentFeedIdx + 1) + allFeeds.take(currentFeedIdx)
+        } else {
+            allFeeds
+        }
+
+        val nextFeed = candidateFeeds.firstOrNull { feed ->
+            (state.unreadCountsByFeed[feed.id] ?: 0) > 0
+        } ?: candidateFeeds.firstOrNull()
+
+        return if (nextFeed != null) {
+            selectFeed(nextFeed.id)
+            nextFeed.title
+        } else {
+            null
         }
     }
 
@@ -306,10 +337,16 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun setReaderTheme(theme: ReaderTheme) {
         _readerTheme.value = theme
+        viewModelScope.launch {
+            configRepository?.saveReaderTheme(theme)
+        }
     }
 
     fun setFontSizeScale(scale: Float) {
         _fontSizeScale.value = scale
+        viewModelScope.launch {
+            configRepository?.saveFontSizeScale(scale)
+        }
     }
 
     private data class QueryFilterParams(
