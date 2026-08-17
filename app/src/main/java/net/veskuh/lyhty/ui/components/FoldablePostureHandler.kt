@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.window.layout.FoldingFeature
 
+import androidx.compose.ui.platform.LocalDensity
+
 enum class DevicePosture {
     NORMAL, // Standard flat canvas or single display
     FLEX_TABLETOP, // Half-opened 90° posture (horizontal hinge)
@@ -18,7 +20,8 @@ data class PostureInfo(
 
 @Composable
 fun rememberPostureInfo(foldingFeature: FoldingFeature?): PostureInfo {
-    return remember(foldingFeature) {
+    val density = LocalDensity.current
+    return remember(foldingFeature, density) {
         if (foldingFeature == null) {
             PostureInfo(DevicePosture.NORMAL)
         } else {
@@ -33,9 +36,11 @@ fun rememberPostureInfo(foldingFeature: FoldingFeature?): PostureInfo {
                 else -> DevicePosture.NORMAL
             }
 
+            val hingeHeightDp = with(density) { foldingFeature.bounds.height().toDp().value }
+
             PostureInfo(
                 posture = posture,
-                hingeBoundsDp = foldingFeature.bounds.height().toFloat(),
+                hingeBoundsDp = hingeHeightDp,
                 isSeparating = foldingFeature.isSeparating
             )
         }

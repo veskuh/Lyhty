@@ -44,6 +44,10 @@ import net.veskuh.lyhty.ui.components.DevicePosture
 import net.veskuh.lyhty.ui.components.PostureInfo
 import net.veskuh.lyhty.ui.state.ReaderTheme
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.remember
+
 @Composable
 fun EntryReaderPane(
     entry: EntryEntity?,
@@ -113,15 +117,11 @@ fun EntryReaderPane(
                             Spacer(modifier = Modifier.height(16.dp))
                             MinifluxActionRow(
                                 entry = entry,
-                                fontSizeScale = fontSizeScale,
-                                readerTheme = readerTheme,
                                 onFetchFullText = onFetchFullText,
                                 onMarkRead = onMarkRead,
                                 onMarkUnread = onMarkUnread,
                                 onNextEntry = onNextEntry,
                                 onPreviousEntry = onPreviousEntry,
-                                onSetTheme = onSetTheme,
-                                onSetFontSizeScale = onSetFontSizeScale,
                                 onBack = onBack,
                                 onOpenBrowser = {
                                     if (entry.url.isNotBlank()) {
@@ -143,15 +143,11 @@ fun EntryReaderPane(
                     // Sticky Miniflux Action Row with Icon + Label Buttons
                     MinifluxActionRow(
                         entry = entry,
-                        fontSizeScale = fontSizeScale,
-                        readerTheme = readerTheme,
                         onFetchFullText = onFetchFullText,
                         onMarkRead = onMarkRead,
                         onMarkUnread = onMarkUnread,
                         onNextEntry = onNextEntry,
                         onPreviousEntry = onPreviousEntry,
-                        onSetTheme = onSetTheme,
-                        onSetFontSizeScale = onSetFontSizeScale,
                         onBack = onBack,
                         onOpenBrowser = {
                             if (entry.url.isNotBlank()) {
@@ -176,59 +172,64 @@ private fun ReaderContent(
     fontSizeScale: Float
 ) {
     val scrollState = rememberScrollState()
-    val plainText = try {
-        Html.fromHtml(entry.content, Html.FROM_HTML_MODE_COMPACT).toString().trim()
-    } catch (_: Throwable) {
-        entry.content
+    val plainText = remember(entry.id, entry.content) {
+        try {
+            Html.fromHtml(entry.content, Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        } catch (_: Throwable) {
+            entry.content
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = entry.feedTitle,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = entry.title,
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontSize = (24 * fontSizeScale).sp
-            ),
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Published ${entry.publishedAt} ${if (entry.author.isNotBlank()) "by ${entry.author}" else ""}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = plainText.ifBlank { "No content preview available." },
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = (16 * fontSizeScale).sp,
-                lineHeight = (24 * fontSizeScale).sp
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 680.dp)
+        ) {
+            Text(
+                text = entry.feedTitle,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
             )
-        )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = entry.title,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = (24 * fontSizeScale).sp
+                ),
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Published ${entry.publishedAt} ${if (entry.author.isNotBlank()) "by ${entry.author}" else ""}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = plainText.ifBlank { "No content preview available." },
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = (16 * fontSizeScale).sp,
+                    lineHeight = (24 * fontSizeScale).sp
+                )
+            )
+        }
     }
 }
 
 @Composable
 private fun MinifluxActionRow(
     entry: EntryEntity,
-    fontSizeScale: Float,
-    readerTheme: ReaderTheme,
     onFetchFullText: (Long) -> Unit,
     onMarkRead: (Long) -> Unit,
     onMarkUnread: (Long) -> Unit,
     onNextEntry: (() -> Unit)?,
     onPreviousEntry: (() -> Unit)?,
-    onSetTheme: ((ReaderTheme) -> Unit)?,
-    onSetFontSizeScale: ((Float) -> Unit)?,
     onBack: (() -> Unit)? = null,
     onOpenBrowser: () -> Unit
 ) {
@@ -299,40 +300,6 @@ private fun MinifluxActionRow(
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("Next")
-            }
-        }
-
-        // Reader Theme controls: OLED / Sepia / Light
-        if (onSetTheme != null) {
-            OutlinedButton(onClick = {
-                val nextTheme = when (readerTheme) {
-                    ReaderTheme.OLED_DARK -> ReaderTheme.SEPIA
-                    ReaderTheme.SEPIA -> ReaderTheme.LIGHT
-                    ReaderTheme.LIGHT -> ReaderTheme.OLED_DARK
-                }
-                onSetTheme(nextTheme)
-            }) {
-                Icon(Icons.Default.Palette, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    when (readerTheme) {
-                        ReaderTheme.OLED_DARK -> "Theme: OLED"
-                        ReaderTheme.SEPIA -> "Theme: Sepia"
-                        ReaderTheme.LIGHT -> "Theme: Light"
-                    }
-                )
-            }
-        }
-
-        // Font scaling controls
-        if (onSetFontSizeScale != null) {
-            OutlinedButton(onClick = {
-                val nextScale = if (fontSizeScale >= 1.5f) 1.0f else fontSizeScale + 0.25f
-                onSetFontSizeScale(nextScale)
-            }) {
-                Icon(Icons.Default.FormatSize, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Font: ${(fontSizeScale * 100).toInt()}%")
             }
         }
     }

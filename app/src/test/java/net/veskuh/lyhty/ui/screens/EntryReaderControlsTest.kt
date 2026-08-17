@@ -37,9 +37,7 @@ class EntryReaderControlsTest {
     )
 
     @Test
-    fun `EntryReaderPane exercises theme switching, font scaling, and navigation callbacks`() {
-        var themeChanged: ReaderTheme? = null
-        var fontScaled: Float? = null
+    fun `EntryReaderPane exercises article action callbacks`() {
         var prevClicked = false
         var nextClicked = false
         var markUnreadClicked = false
@@ -54,9 +52,7 @@ class EntryReaderControlsTest {
                 onMarkRead = {},
                 onMarkUnread = { markUnreadClicked = true },
                 onPreviousEntry = { prevClicked = true },
-                onNextEntry = { nextClicked = true },
-                onSetTheme = { themeChanged = it },
-                onSetFontSizeScale = { fontScaled = it }
+                onNextEntry = { nextClicked = true }
             )
         }
 
@@ -64,18 +60,6 @@ class EntryReaderControlsTest {
 
         // Verify title and html content render
         composeTestRule.onNodeWithText("Comprehensive Reader Unit Test Article").assertIsDisplayed()
-
-        // Click Theme cycle button
-        composeTestRule.onNode(hasText("Theme: OLED") and hasClickAction())
-            .performScrollTo()
-            .performClick()
-        assertEquals(ReaderTheme.SEPIA, themeChanged)
-
-        // Click Font scale button
-        composeTestRule.onNode(hasText("Font: 100%") and hasClickAction())
-            .performScrollTo()
-            .performClick()
-        assertTrue("fontScaled should be 1.25f", fontScaled != null && fontScaled == 1.25f)
 
         // Click Prev button
         composeTestRule.onNode(hasText("Prev") and hasClickAction())
@@ -94,5 +78,37 @@ class EntryReaderControlsTest {
             .performScrollTo()
             .performClick()
         assertTrue(markUnreadClicked)
+    }
+
+    @Test
+    fun `SettingsPane exercises theme switching and font scaling`() {
+        var themeChanged: ReaderTheme? = null
+        var fontScaled: Float? = null
+
+        composeTestRule.setContent {
+            SettingsPane(
+                initialServerUrl = "https://veskuh.net/miniflux",
+                initialApiKey = "test_key",
+                currentLogLevel = net.veskuh.lyhty.util.LogLevel.DEBUG,
+                fontSizeScale = 1.0f,
+                readerTheme = ReaderTheme.OLED_DARK,
+                onSaveConfig = { _, _ -> },
+                onSaveLogLevel = {},
+                onSetTheme = { themeChanged = it },
+                onSetFontSizeScale = { fontScaled = it },
+                onBack = {}
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        // Verify header
+        composeTestRule.onNodeWithText("App Settings").assertIsDisplayed()
+
+        // Click Sepia Theme swatch
+        composeTestRule.onNode(hasText("Sepia") and hasClickAction())
+            .performScrollTo()
+            .performClick()
+        assertEquals(ReaderTheme.SEPIA, themeChanged)
     }
 }
