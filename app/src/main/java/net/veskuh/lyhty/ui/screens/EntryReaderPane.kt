@@ -21,13 +21,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -211,27 +215,8 @@ fun EntryReaderPane(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp)
+                        .padding(16.dp)
                 ) {
-                    // Sticky Miniflux Action Row with Icon + Label Buttons
-                    MinifluxActionRow(
-                        entry = entry,
-                        onFetchFullText = onFetchFullText,
-                        onMarkRead = onMarkRead,
-                        onMarkUnread = onMarkUnread,
-                        onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
-                        onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
-                        onBack = onBack,
-                        onOpenBrowser = {
-                            if (entry.url.isNotBlank()) {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(entry.url))
-                                context.startActivity(intent)
-                            }
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -252,6 +237,25 @@ fun EntryReaderPane(
                             ReaderContent(entry = currentEntry, fontSizeScale = fontSizeScale)
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Bottom Miniflux Action Toolbar
+                    MinifluxActionRow(
+                        entry = entry,
+                        onFetchFullText = onFetchFullText,
+                        onMarkRead = onMarkRead,
+                        onMarkUnread = onMarkUnread,
+                        onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
+                        onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
+                        onBack = onBack,
+                        onOpenBrowser = {
+                            if (entry.url.isNotBlank()) {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(entry.url))
+                                context.startActivity(intent)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -324,73 +328,98 @@ private fun MinifluxActionRow(
     onBack: (() -> Unit)? = null,
     onOpenBrowser: () -> Unit
 ) {
-    val scrollState = rememberScrollState()
+    var isMenuExpanded by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(scrollState),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Enforcing Strict UX Rule: Icon + Label for all action buttons
-
-        // [ ← Back to Articles ]
-        if (onBack != null) {
-            Button(
-                onClick = onBack,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Back to Articles")
-            }
-        }
-
-        // [ 🌐 Fetch Full Text ]
-        Button(
-            onClick = { onFetchFullText(entry.id) },
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Language, contentDescription = null)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Fetch Full Text")
-        }
-
-        // [ 👁️ Mark Read ] / [ 👁️ Mark Unread ]
-        if (entry.status == "unread") {
-            OutlinedButton(onClick = { onMarkRead(entry.id) }) {
-                Icon(Icons.Default.Visibility, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Mark Read")
+            // [ ← Articles ]
+            if (onBack != null) {
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Articles")
+                }
             }
-        } else {
-            OutlinedButton(onClick = { onMarkUnread(entry.id) }) {
-                Icon(Icons.Default.VisibilityOff, contentDescription = null)
+
+            // [ 🌐 Full Text ]
+            Button(
+                onClick = { onFetchFullText(entry.id) },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(Icons.Default.Language, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Mark Unread")
+                Text("Full Text")
             }
-        }
 
-        // [ 🔗 Open Browser ]
-        OutlinedButton(onClick = onOpenBrowser) {
-            Icon(Icons.Default.OpenInBrowser, contentDescription = null)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Open Browser")
-        }
-
-        if (onPreviousEntry != null) {
-            OutlinedButton(onClick = onPreviousEntry) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+            // [ 🔗 Browser ]
+            OutlinedButton(onClick = onOpenBrowser) {
+                Icon(Icons.Default.OpenInBrowser, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Prev")
+                Text("Browser")
             }
         }
 
-        if (onNextEntry != null) {
-            OutlinedButton(onClick = onNextEntry) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Next")
+        // Overflow / Others Menu
+        Box {
+            IconButton(onClick = { isMenuExpanded = true }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "Others menu")
+            }
+
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false }
+            ) {
+                if (entry.status == "unread") {
+                    DropdownMenuItem(
+                        text = { Text("Mark Read") },
+                        leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onMarkRead(entry.id)
+                        }
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text("Mark Unread") },
+                        leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onMarkUnread(entry.id)
+                        }
+                    )
+                }
+
+                if (onPreviousEntry != null) {
+                    DropdownMenuItem(
+                        text = { Text("Previous Article") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onPreviousEntry()
+                        }
+                    )
+                }
+
+                if (onNextEntry != null) {
+                    DropdownMenuItem(
+                        text = { Text("Next Article") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onNextEntry()
+                        }
+                    )
+                }
             }
         }
     }

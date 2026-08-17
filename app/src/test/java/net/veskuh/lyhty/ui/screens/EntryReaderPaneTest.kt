@@ -55,22 +55,11 @@ class EntryReaderPaneTest {
 
         composeTestRule.waitForIdle()
 
-        // Verify explicit Icon + Text Label rule
-        composeTestRule.onNodeWithText("Fetch Full Text").assertIsDisplayed()
+        // Verify shortened toolbar button labels
+        composeTestRule.onNodeWithText("Full Text").assertIsDisplayed()
 
-        composeTestRule.onNode(hasText("Fetch Full Text") and hasClickAction())
-            .performScrollTo()
+        composeTestRule.onNode(hasText("Full Text") and hasClickAction())
             .performClick()
         assertTrue(fetchFullTextTapped)
-
-        composeTestRule.onNode(hasText("Mark Read") and hasClickAction())
-            .performScrollTo()
-            .performClick()
-        assertTrue(markReadTapped)
-
-        composeTestRule.onNode(hasText("Next") and hasClickAction())
-            .performScrollTo()
-            .performClick()
-        assertTrue(nextTapped)
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -61,22 +62,19 @@ class EntryReaderControlsTest {
         // Verify title and html content render
         composeTestRule.onNodeWithText("Comprehensive Reader Unit Test Article").assertIsDisplayed()
 
-        // Click Prev button
-        composeTestRule.onNode(hasText("Prev") and hasClickAction())
-            .performScrollTo()
-            .performClick()
+        // Open overflow menu for Previous Article
+        composeTestRule.onNodeWithContentDescription("Others menu").performClick()
+        composeTestRule.onNode(hasText("Previous Article") and hasClickAction()).performClick()
         assertTrue(prevClicked)
 
-        // Click Next button
-        composeTestRule.onNode(hasText("Next") and hasClickAction())
-            .performScrollTo()
-            .performClick()
+        // Open overflow menu for Next Article
+        composeTestRule.onNodeWithContentDescription("Others menu").performClick()
+        composeTestRule.onNode(hasText("Next Article") and hasClickAction()).performClick()
         assertTrue(nextClicked)
 
-        // Click Mark Unread button
-        composeTestRule.onNode(hasText("Mark Unread") and hasClickAction())
-            .performScrollTo()
-            .performClick()
+        // Open overflow menu for Mark Unread
+        composeTestRule.onNodeWithContentDescription("Others menu").performClick()
+        composeTestRule.onNode(hasText("Mark Unread") and hasClickAction()).performClick()
         assertTrue(markUnreadClicked)
     }
 
