@@ -223,6 +223,7 @@ class MinifluxMainViewModel @Inject constructor(
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
         _selectedFeedId.value = null
+        _selectedEntryId.value = null
     }
 
     fun selectCategory(category: CategoryEntity?) {
@@ -231,6 +232,7 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun selectFeed(feedId: Long?) {
         _selectedFeedId.value = feedId
+        _selectedEntryId.value = null
         if (feedId != null) {
             val feed = uiState.value.feeds.find { it.id == feedId }
             if (feed?.categoryId != null) {

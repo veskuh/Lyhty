@@ -1,6 +1,7 @@
 package net.veskuh.lyhty.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -183,64 +184,122 @@ fun LyhtyAdaptiveApp(
                 }
             }
 
-            ListDetailPaneScaffold(
-                modifier = Modifier.weight(1f),
-                directive = navigator.scaffoldDirective,
-                value = navigator.scaffoldValue,
-            listPane = {
-                AnimatedPane {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        CategoryFeedTreePane(
-                            categories = uiState.categories,
-                            feeds = uiState.feeds,
-                            selectedCategory = uiState.selectedCategory,
-                            selectedFeed = uiState.selectedFeed,
-                            unreadCountsByCategory = uiState.unreadCountsByCategory,
-                            unreadCountsByFeed = uiState.unreadCountsByFeed,
-                            onSelectCategory = { category ->
-                                viewModel.selectCategory(category)
-                            },
-                            onSelectFeed = { feed ->
-                                viewModel.selectFeed(feed)
-                            },
-                            onSync = { viewModel.refreshAll() },
-                            onOpenSettings = { showSettingsDialog = true },
-                            modifier = Modifier.weight(0.75f)
-                        )
-                        EntryListPane(
-                            entries = uiState.entries,
-                            selectedEntry = uiState.selectedEntry,
-                            statusFilter = uiState.statusFilter,
-                            searchQuery = uiState.searchQuery,
-                            onSelectEntry = { entry ->
-                                viewModel.selectEntry(entry.id)
-                                navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, entry.id)
-                            },
-                            onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
-                            onSearchQueryChange = { query -> viewModel.setSearchQuery(query) },
-                            modifier = Modifier.weight(1.45f)
-                        )
+            val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+            val isExpandedWindow = configuration.screenWidthDp >= 600
+
+            if (isExpandedWindow) {
+                // Unfolded Dual-Pane Layout: Left = Categories Tree (pinned), Right = Article List or Reader
+                Row(modifier = Modifier.fillMaxSize()) {
+                    CategoryFeedTreePane(
+                        categories = uiState.categories,
+                        feeds = uiState.feeds,
+                        selectedCategory = uiState.selectedCategory,
+                        selectedFeed = uiState.selectedFeed,
+                        unreadCountsByCategory = uiState.unreadCountsByCategory,
+                        unreadCountsByFeed = uiState.unreadCountsByFeed,
+                        onSelectCategory = { category ->
+                            viewModel.selectCategory(category)
+                        },
+                        onSelectFeed = { feed ->
+                            viewModel.selectFeed(feed)
+                        },
+                        onSync = { viewModel.refreshAll() },
+                        onOpenSettings = { showSettingsDialog = true },
+                        modifier = Modifier.weight(0.75f)
+                    )
+
+                    Box(modifier = Modifier.weight(1.45f).fillMaxSize()) {
+                        if (uiState.selectedEntry != null) {
+                            EntryReaderPane(
+                                entry = uiState.selectedEntry,
+                                postureInfo = postureInfo,
+                                fontSizeScale = uiState.fontSizeScale,
+                                readerTheme = uiState.readerTheme,
+                                onFetchFullText = { id -> viewModel.fetchOriginalContent(id) },
+                                onMarkRead = { id -> viewModel.markAsRead(id) },
+                                onMarkUnread = { id -> viewModel.markAsUnread(id) },
+                                onNextEntry = { viewModel.selectNextEntry() },
+                                onPreviousEntry = { viewModel.selectPreviousEntry() },
+                                onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
+                                onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
+                                onBack = { viewModel.selectEntry(null) }
+                            )
+                        } else {
+                            EntryListPane(
+                                entries = uiState.entries,
+                                selectedEntry = uiState.selectedEntry,
+                                statusFilter = uiState.statusFilter,
+                                searchQuery = uiState.searchQuery,
+                                onSelectEntry = { entry ->
+                                    viewModel.selectEntry(entry.id)
+                                },
+                                onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
+                                onSearchQueryChange = { query -> viewModel.setSearchQuery(query) }
+                            )
+                        }
                     }
                 }
-            },
-            detailPane = {
-                AnimatedPane {
-                    EntryReaderPane(
-                        entry = uiState.selectedEntry,
-                        postureInfo = postureInfo,
-                        fontSizeScale = uiState.fontSizeScale,
-                        readerTheme = uiState.readerTheme,
-                        onFetchFullText = { id -> viewModel.fetchOriginalContent(id) },
-                        onMarkRead = { id -> viewModel.markAsRead(id) },
-                        onMarkUnread = { id -> viewModel.markAsUnread(id) },
-                        onNextEntry = { viewModel.selectNextEntry() },
-                        onPreviousEntry = { viewModel.selectPreviousEntry() },
-                        onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
-                        onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) }
-                    )
-                }
+            } else {
+                // Folded Single-Pane Cover Screen Layout
+                ListDetailPaneScaffold(
+                    modifier = Modifier.weight(1f),
+                    directive = navigator.scaffoldDirective,
+                    value = navigator.scaffoldValue,
+                    listPane = {
+                        AnimatedPane {
+                            CategoryFeedTreePane(
+                                categories = uiState.categories,
+                                feeds = uiState.feeds,
+                                selectedCategory = uiState.selectedCategory,
+                                selectedFeed = uiState.selectedFeed,
+                                unreadCountsByCategory = uiState.unreadCountsByCategory,
+                                unreadCountsByFeed = uiState.unreadCountsByFeed,
+                                onSelectCategory = { category ->
+                                    viewModel.selectCategory(category)
+                                },
+                                onSelectFeed = { feed ->
+                                    viewModel.selectFeed(feed)
+                                },
+                                onSync = { viewModel.refreshAll() },
+                                onOpenSettings = { showSettingsDialog = true }
+                            )
+                        }
+                    },
+                    detailPane = {
+                        AnimatedPane {
+                            if (uiState.selectedEntry != null) {
+                                EntryReaderPane(
+                                    entry = uiState.selectedEntry,
+                                    postureInfo = postureInfo,
+                                    fontSizeScale = uiState.fontSizeScale,
+                                    readerTheme = uiState.readerTheme,
+                                    onFetchFullText = { id -> viewModel.fetchOriginalContent(id) },
+                                    onMarkRead = { id -> viewModel.markAsRead(id) },
+                                    onMarkUnread = { id -> viewModel.markAsUnread(id) },
+                                    onNextEntry = { viewModel.selectNextEntry() },
+                                    onPreviousEntry = { viewModel.selectPreviousEntry() },
+                                    onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
+                                    onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
+                                    onBack = { viewModel.selectEntry(null) }
+                                )
+                            } else {
+                                EntryListPane(
+                                    entries = uiState.entries,
+                                    selectedEntry = uiState.selectedEntry,
+                                    statusFilter = uiState.statusFilter,
+                                    searchQuery = uiState.searchQuery,
+                                    onSelectEntry = { entry ->
+                                        viewModel.selectEntry(entry.id)
+                                        navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, entry.id)
+                                    },
+                                    onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
+                                    onSearchQueryChange = { query -> viewModel.setSearchQuery(query) }
+                                )
+                            }
+                        }
+                    }
+                )
             }
-        )
     }
 }
 }

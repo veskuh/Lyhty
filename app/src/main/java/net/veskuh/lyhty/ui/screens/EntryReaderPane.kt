@@ -57,6 +57,7 @@ fun EntryReaderPane(
     onPreviousEntry: (() -> Unit)? = null,
     onSetTheme: ((ReaderTheme) -> Unit)? = null,
     onSetFontSizeScale: ((Float) -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -121,6 +122,7 @@ fun EntryReaderPane(
                                 onPreviousEntry = onPreviousEntry,
                                 onSetTheme = onSetTheme,
                                 onSetFontSizeScale = onSetFontSizeScale,
+                                onBack = onBack,
                                 onOpenBrowser = {
                                     if (entry.url.isNotBlank()) {
                                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(entry.url))
@@ -150,6 +152,7 @@ fun EntryReaderPane(
                         onPreviousEntry = onPreviousEntry,
                         onSetTheme = onSetTheme,
                         onSetFontSizeScale = onSetFontSizeScale,
+                        onBack = onBack,
                         onOpenBrowser = {
                             if (entry.url.isNotBlank()) {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(entry.url))
@@ -226,6 +229,7 @@ private fun MinifluxActionRow(
     onPreviousEntry: (() -> Unit)?,
     onSetTheme: ((ReaderTheme) -> Unit)?,
     onSetFontSizeScale: ((Float) -> Unit)?,
+    onBack: (() -> Unit)? = null,
     onOpenBrowser: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -237,6 +241,18 @@ private fun MinifluxActionRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Enforcing Strict UX Rule: Icon + Label for all action buttons
+
+        // [ ← Back to Articles ]
+        if (onBack != null) {
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Back to Articles")
+            }
+        }
 
         // [ 🌐 Fetch Full Text ]
         Button(
