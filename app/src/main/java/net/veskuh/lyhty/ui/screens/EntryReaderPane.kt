@@ -101,6 +101,7 @@ fun EntryReaderPane(
 
             var totalDragX by remember { mutableFloatStateOf(0f) }
             var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
+            var slideDirection by remember { androidx.compose.runtime.mutableIntStateOf(1) }
 
             val gestureModifier = Modifier.pointerInput(entry.id) {
                 detectHorizontalDragGestures(
@@ -108,7 +109,8 @@ fun EntryReaderPane(
                     onDragEnd = {
                         val thresholdPx = 60.dp.toPx()
                         if (totalDragX < -thresholdPx) {
-                            // Swiped Left -> Next Article
+                            // Swiped Left -> Next Article (slide in from Right)
+                            slideDirection = 1
                             val moved = onNextEntry?.invoke() ?: false
                             if (!moved) {
                                 if (!isAtEndSignaled) {
@@ -128,7 +130,8 @@ fun EntryReaderPane(
                                 }
                             }
                         } else if (totalDragX > thresholdPx) {
-                            // Swiped Right -> Previous Article
+                            // Swiped Right -> Previous Article (slide in from Left)
+                            slideDirection = -1
                             val moved = onPreviousEntry?.invoke() ?: false
                             if (!moved) {
                                 Toast.makeText(context, "First article in current list", Toast.LENGTH_SHORT).show()
@@ -155,7 +158,11 @@ fun EntryReaderPane(
                         AnimatedContent(
                             targetState = entry,
                             transitionSpec = {
-                                (slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width })
+                                if (slideDirection >= 0) {
+                                    slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
+                                } else {
+                                    slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
+                                }
                             },
                             label = "ReaderContentFlexTransition"
                         ) { currentEntry ->
@@ -186,8 +193,8 @@ fun EntryReaderPane(
                                 onFetchFullText = onFetchFullText,
                                 onMarkRead = onMarkRead,
                                 onMarkUnread = onMarkUnread,
-                                onNextEntry = { onNextEntry?.invoke() },
-                                onPreviousEntry = { onPreviousEntry?.invoke() },
+                                onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
+                                onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
                                 onBack = onBack,
                                 onOpenBrowser = {
                                     if (entry.url.isNotBlank()) {
@@ -212,8 +219,8 @@ fun EntryReaderPane(
                         onFetchFullText = onFetchFullText,
                         onMarkRead = onMarkRead,
                         onMarkUnread = onMarkUnread,
-                        onNextEntry = { onNextEntry?.invoke() },
-                        onPreviousEntry = { onPreviousEntry?.invoke() },
+                        onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
+                        onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
                         onBack = onBack,
                         onOpenBrowser = {
                             if (entry.url.isNotBlank()) {
@@ -234,7 +241,11 @@ fun EntryReaderPane(
                         AnimatedContent(
                             targetState = entry,
                             transitionSpec = {
-                                (slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width })
+                                if (slideDirection >= 0) {
+                                    slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
+                                } else {
+                                    slideInHorizontally { width -> -width } togetherWith slideOutHorizontally { width -> width }
+                                }
                             },
                             label = "ReaderContentFlatTransition"
                         ) { currentEntry ->

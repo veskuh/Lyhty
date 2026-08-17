@@ -288,7 +288,7 @@ class MinifluxMainViewModel @Inject constructor(
 
         val nextFeed = candidateFeeds.firstOrNull { feed ->
             (state.unreadCountsByFeed[feed.id] ?: 0) > 0
-        } ?: candidateFeeds.firstOrNull()
+        }
 
         return if (nextFeed != null) {
             selectFeed(nextFeed.id)
