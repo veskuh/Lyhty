@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -120,6 +121,8 @@ fun EntryReaderPane(
             var totalDragX by remember { mutableFloatStateOf(0f) }
             var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
             var slideDirection by remember { androidx.compose.runtime.mutableIntStateOf(1) }
+            val entryCache = remember { mutableStateMapOf<Long, EntryEntity>() }
+            entryCache[entry.id] = entry
 
             val gestureModifier = Modifier.pointerInput(entry.id) {
                 detectHorizontalDragGestures(
@@ -174,7 +177,7 @@ fun EntryReaderPane(
                             .then(gestureModifier)
                     ) {
                         AnimatedContent(
-                            targetState = entry,
+                            targetState = entry.id,
                             transitionSpec = {
                                 if (slideDirection >= 0) {
                                     slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
@@ -183,8 +186,9 @@ fun EntryReaderPane(
                                 }
                             },
                             label = "ReaderContentFlexTransition"
-                        ) { currentEntry ->
-                            ReaderContent(entry = currentEntry, fontSizeScale = fontSizeScale)
+                        ) { targetId ->
+                            val cachedEntry = entryCache[targetId] ?: entry
+                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale)
                         }
                     }
 
@@ -240,7 +244,7 @@ fun EntryReaderPane(
                             .then(gestureModifier)
                     ) {
                         AnimatedContent(
-                            targetState = entry,
+                            targetState = entry.id,
                             transitionSpec = {
                                 if (slideDirection >= 0) {
                                     slideInHorizontally { width -> width } togetherWith slideOutHorizontally { width -> -width }
@@ -249,8 +253,9 @@ fun EntryReaderPane(
                                 }
                             },
                             label = "ReaderContentFlatTransition"
-                        ) { currentEntry ->
-                            ReaderContent(entry = currentEntry, fontSizeScale = fontSizeScale)
+                        ) { targetId ->
+                            val cachedEntry = entryCache[targetId] ?: entry
+                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale)
                         }
                     }
 
