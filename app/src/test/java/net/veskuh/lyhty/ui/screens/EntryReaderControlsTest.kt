@@ -72,9 +72,9 @@ class EntryReaderControlsTest {
         composeTestRule.onNode(hasText("Next Article") and hasClickAction()).performClick()
         assertTrue(nextClicked)
 
-        // Open overflow menu for Mark Unread
+        // Open overflow menu for Mark as Unread
         composeTestRule.onNodeWithContentDescription("Others menu").performClick()
-        composeTestRule.onNode(hasText("Mark Unread") and hasClickAction()).performClick()
+        composeTestRule.onNode(hasText("Mark as Unread") and hasClickAction()).performClick()
         assertTrue(markUnreadClicked)
     }
 

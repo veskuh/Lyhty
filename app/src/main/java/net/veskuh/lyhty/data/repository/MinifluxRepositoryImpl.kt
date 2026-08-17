@@ -13,6 +13,11 @@ import net.veskuh.lyhty.util.LyhtyLogger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+@Serializable
+private data class SyncPayload(val entryId: Long)
 
 @Singleton
 class MinifluxRepositoryImpl @Inject constructor(
@@ -144,6 +149,29 @@ class MinifluxRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun markEntriesAsRead(entryIds: List<Long>) {
+        if (entryIds.isEmpty()) return
+        LyhtyLogger.info("Repository", "Bulk marking ${entryIds.size} entries as READ...")
+        entryIds.forEach { id ->
+            database.entryDao().updateEntryStatus(id, "read")
+        }
+        try {
+            apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds, "read"))
+            database.entryDao().clearPendingSyncFlag(entryIds)
+            LyhtyLogger.debug("Repository", "Server confirmed bulk mark READ for ${entryIds.size} entries.")
+        } catch (e: Exception) {
+            LyhtyLogger.warn("Repository", "Server bulk update failed for ${entryIds.size} entries. Queuing offline.", e)
+            entryIds.forEach { id ->
+                database.syncDao().enqueue(
+                    SyncQueueEntity(
+                        actionType = "MARK_READ",
+                        payload = """{"entryId":$id}"""
+                    )
+                )
+            }
+        }
+    }
+
     override suspend fun fetchServerFullText(entryId: Long): String {
         LyhtyLogger.info("Repository", "Fetching server-side readability content for entry $entryId...")
         return try {
@@ -187,27 +215,51 @@ class MinifluxRepositoryImpl @Inject constructor(
         val pendingQueue = database.syncDao().getAllPendingItems()
         if (pendingQueue.isNotEmpty()) {
             LyhtyLogger.info("Repository", "Processing ${pendingQueue.size} items from SyncQueue...")
-            val processedIds = mutableListOf<Long>()
+            val json = Json { ignoreUnknownKeys = true }
+            val readItems = mutableListOf<Pair<Long, Long>>() // queueId to entryId
+            val unreadItems = mutableListOf<Pair<Long, Long>>() // queueId to entryId
+            val processedQueueIds = mutableListOf<Long>()
+
             for (item in pendingQueue) {
                 try {
+                    val payload = json.decodeFromString<SyncPayload>(item.payload)
                     when (item.actionType) {
-                        "MARK_READ" -> {
-                            val id = item.payload.substringAfter("entryId\": ").substringBefore("}").trim().toLong()
-                            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(id), "read"))
-                        }
-                        "MARK_UNREAD" -> {
-                            val id = item.payload.substringAfter("entryId\": ").substringBefore("}").trim().toLong()
-                            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(id), "unread"))
-                        }
+                        "MARK_READ" -> readItems.add(item.id to payload.entryId)
+                        "MARK_UNREAD" -> unreadItems.add(item.id to payload.entryId)
                     }
-                    processedIds.add(item.id)
                 } catch (e: Exception) {
-                    LyhtyLogger.warn("Repository", "SyncQueue item ${item.id} (${item.actionType}) failed. Will retry next sync.", e)
+                    LyhtyLogger.warn("Repository", "Invalid SyncQueue payload for item ${item.id}", e)
+                    processedQueueIds.add(item.id)
                 }
             }
-            if (processedIds.isNotEmpty()) {
-                database.syncDao().deleteItems(processedIds)
-                LyhtyLogger.info("Repository", "Successfully processed and deleted ${processedIds.size} queue items.")
+
+            if (readItems.isNotEmpty()) {
+                try {
+                    val readEntryIds = readItems.map { it.second }.distinct()
+                    apiService.updateEntriesStatus(UpdateStatusRequestDto(readEntryIds, "read"))
+                    processedQueueIds.addAll(readItems.map { it.first })
+                    LyhtyLogger.info("Repository", "Batched flushed ${readEntryIds.size} queued READ items.")
+                } catch (e: Exception) {
+                    LyhtyLogger.warn("Repository", "Failed batched flush of queued READ items", e)
+                    throw e
+                }
+            }
+
+            if (unreadItems.isNotEmpty()) {
+                try {
+                    val unreadEntryIds = unreadItems.map { it.second }.distinct()
+                    apiService.updateEntriesStatus(UpdateStatusRequestDto(unreadEntryIds, "unread"))
+                    processedQueueIds.addAll(unreadItems.map { it.first })
+                    LyhtyLogger.info("Repository", "Batched flushed ${unreadEntryIds.size} queued UNREAD items.")
+                } catch (e: Exception) {
+                    LyhtyLogger.warn("Repository", "Failed batched flush of queued UNREAD items", e)
+                    throw e
+                }
+            }
+
+            if (processedQueueIds.isNotEmpty()) {
+                database.syncDao().deleteItems(processedQueueIds.distinct())
+                LyhtyLogger.info("Repository", "Successfully processed and deleted ${processedQueueIds.size} queue items.")
             }
         }
     }

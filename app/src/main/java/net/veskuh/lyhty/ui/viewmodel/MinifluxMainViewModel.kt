@@ -203,9 +203,9 @@ class MinifluxMainViewModel @Inject constructor(
             _errorMessage.value = null
             _currentError.value = null
             try {
+                repository.flushPendingSyncs()
                 repository.syncCategoriesAndFeeds()
                 repository.syncEntries(_statusFilter.value)
-                repository.flushPendingSyncs()
             } catch (e: Exception) {
                 handleException(e)
             } finally {
@@ -220,10 +220,13 @@ class MinifluxMainViewModel @Inject constructor(
         _errorMessage.value = classified.displayMessage
     }
 
+    private var activeReadingList: List<EntryEntity> = emptyList()
+
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
         _selectedFeedId.value = null
         _selectedEntryId.value = null
+        activeReadingList = emptyList()
     }
 
     fun selectCategory(category: CategoryEntity?) {
@@ -233,6 +236,7 @@ class MinifluxMainViewModel @Inject constructor(
     fun selectFeed(feedId: Long?) {
         _selectedFeedId.value = feedId
         _selectedEntryId.value = null
+        activeReadingList = emptyList()
         if (feedId != null) {
             val feed = uiState.value.feeds.find { it.id == feedId }
             if (feed?.categoryId != null) {
@@ -247,25 +251,36 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun selectEntry(entryId: Long?) {
         _selectedEntryId.value = entryId
+        if (entryId == null) {
+            activeReadingList = uiState.value.entries
+        } else {
+            if (activeReadingList.isEmpty() || activeReadingList.none { it.id == entryId }) {
+                activeReadingList = uiState.value.entries
+            }
+            val entry = activeReadingList.find { it.id == entryId } ?: uiState.value.entries.find { it.id == entryId }
+            if (entry != null && entry.status == "unread") {
+                markAsRead(entryId)
+            }
+        }
     }
 
     fun selectNextEntry(): Boolean {
-        val currentEntries = uiState.value.entries
+        val navList = if (activeReadingList.isNotEmpty()) activeReadingList else uiState.value.entries
         val currentId = _selectedEntryId.value ?: return false
-        val index = currentEntries.indexOfFirst { it.id == currentId }
-        if (index != -1 && index + 1 < currentEntries.size) {
-            selectEntry(currentEntries[index + 1].id)
+        val index = navList.indexOfFirst { it.id == currentId }
+        if (index != -1 && index + 1 < navList.size) {
+            selectEntry(navList[index + 1].id)
             return true
         }
         return false
     }
 
     fun selectPreviousEntry(): Boolean {
-        val currentEntries = uiState.value.entries
+        val navList = if (activeReadingList.isNotEmpty()) activeReadingList else uiState.value.entries
         val currentId = _selectedEntryId.value ?: return false
-        val index = currentEntries.indexOfFirst { it.id == currentId }
+        val index = navList.indexOfFirst { it.id == currentId }
         if (index > 0) {
-            selectEntry(currentEntries[index - 1].id)
+            selectEntry(navList[index - 1].id)
             return true
         }
         return false
@@ -300,15 +315,27 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun setStatusFilter(filter: String?) {
         _statusFilter.value = filter
+        activeReadingList = emptyList()
     }
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+        activeReadingList = emptyList()
     }
 
     fun markAsRead(entryId: Long) {
         viewModelScope.launch {
             repository.markEntryAsRead(entryId)
+        }
+    }
+
+    fun markAllAsRead() {
+        viewModelScope.launch {
+            val currentUnread = uiState.value.entries.filter { it.status == "unread" }
+            val ids = currentUnread.map { it.id }
+            if (ids.isNotEmpty()) {
+                repository.markEntriesAsRead(ids)
+            }
         }
     }
 

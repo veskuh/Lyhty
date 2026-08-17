@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreVert
@@ -32,10 +33,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +54,7 @@ import net.veskuh.lyhty.ui.state.ReaderTheme
 
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 
 import android.widget.Toast
@@ -73,6 +78,7 @@ fun EntryReaderPane(
     onFetchFullText: (Long) -> Unit,
     onMarkRead: (Long) -> Unit,
     onMarkUnread: (Long) -> Unit,
+    onMarkAllRead: (() -> Unit)? = null,
     onNextEntry: (() -> Boolean)? = null,
     onPreviousEntry: (() -> Boolean)? = null,
     onAdvanceToNextFeed: (() -> String?)? = null,
@@ -101,7 +107,15 @@ fun EntryReaderPane(
             return@Surface
         }
 
+        LaunchedEffect(entry.id) {
+            if (entry.status == "unread") {
+                onMarkRead(entry.id)
+            }
+        }
+
         val isFlexMode = postureInfo.posture == DevicePosture.FLEX_TABLETOP
+        val windowAdaptiveInfo = currentWindowAdaptiveInfo()
+        val isCompact = windowAdaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
 
             var totalDragX by remember { mutableFloatStateOf(0f) }
             var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
@@ -194,9 +208,11 @@ fun EntryReaderPane(
                             Spacer(modifier = Modifier.height(16.dp))
                             MinifluxActionRow(
                                 entry = entry,
+                                isCompact = isCompact,
                                 onFetchFullText = onFetchFullText,
                                 onMarkRead = onMarkRead,
                                 onMarkUnread = onMarkUnread,
+                                onMarkAllRead = onMarkAllRead,
                                 onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
                                 onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
                                 onBack = onBack,
@@ -243,9 +259,11 @@ fun EntryReaderPane(
                     // Bottom Miniflux Action Toolbar
                     MinifluxActionRow(
                         entry = entry,
+                        isCompact = isCompact,
                         onFetchFullText = onFetchFullText,
                         onMarkRead = onMarkRead,
                         onMarkUnread = onMarkUnread,
+                        onMarkAllRead = onMarkAllRead,
                         onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
                         onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
                         onBack = onBack,
@@ -320,9 +338,11 @@ private fun ReaderContent(
 @Composable
 private fun MinifluxActionRow(
     entry: EntryEntity,
+    isCompact: Boolean = false,
     onFetchFullText: (Long) -> Unit,
     onMarkRead: (Long) -> Unit,
     onMarkUnread: (Long) -> Unit,
+    onMarkAllRead: (() -> Unit)? = null,
     onNextEntry: (() -> Unit)?,
     onPreviousEntry: (() -> Unit)?,
     onBack: (() -> Unit)? = null,
@@ -341,31 +361,58 @@ private fun MinifluxActionRow(
         ) {
             // [ ← Articles ]
             if (onBack != null) {
-                Button(
-                    onClick = onBack,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Articles")
+                if (isCompact) {
+                    IconButton(
+                        onClick = onBack,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Articles")
+                    }
+                } else {
+                    Button(
+                        onClick = onBack,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Articles")
+                    }
                 }
             }
 
             // [ 🌐 Full Text ]
-            Button(
-                onClick = { onFetchFullText(entry.id) },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Language, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Full Text")
+            if (isCompact) {
+                IconButton(
+                    onClick = { onFetchFullText(entry.id) },
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Icon(Icons.Default.Language, contentDescription = "Full Text")
+                }
+            } else {
+                Button(
+                    onClick = { onFetchFullText(entry.id) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Language, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Full Text")
+                }
             }
 
             // [ 🔗 Browser ]
-            OutlinedButton(onClick = onOpenBrowser) {
-                Icon(Icons.Default.OpenInBrowser, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Browser")
+            if (isCompact) {
+                IconButton(
+                    onClick = onOpenBrowser,
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                ) {
+                    Icon(Icons.Default.OpenInBrowser, contentDescription = "Browser")
+                }
+            } else {
+                OutlinedButton(onClick = onOpenBrowser) {
+                    Icon(Icons.Default.OpenInBrowser, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Browser")
+                }
             }
         }
 
@@ -379,47 +426,58 @@ private fun MinifluxActionRow(
                 expanded = isMenuExpanded,
                 onDismissRequest = { isMenuExpanded = false }
             ) {
-                if (entry.status == "unread") {
+                val isUnread = entry.status == "unread"
+
+                DropdownMenuItem(
+                    text = { Text("Mark as Read") },
+                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
+                    enabled = isUnread,
+                    onClick = {
+                        isMenuExpanded = false
+                        onMarkRead(entry.id)
+                    }
+                )
+
+                DropdownMenuItem(
+                    text = { Text("Mark as Unread") },
+                    leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
+                    enabled = !isUnread,
+                    onClick = {
+                        isMenuExpanded = false
+                        onMarkUnread(entry.id)
+                    }
+                )
+
+                if (onMarkAllRead != null) {
                     DropdownMenuItem(
-                        text = { Text("Mark Read") },
-                        leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
+                        text = { Text("Mark All as Read") },
+                        leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
                         onClick = {
                             isMenuExpanded = false
-                            onMarkRead(entry.id)
-                        }
-                    )
-                } else {
-                    DropdownMenuItem(
-                        text = { Text("Mark Unread") },
-                        leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
-                        onClick = {
-                            isMenuExpanded = false
-                            onMarkUnread(entry.id)
+                            onMarkAllRead()
                         }
                     )
                 }
 
-                if (onPreviousEntry != null) {
-                    DropdownMenuItem(
-                        text = { Text("Previous Article") },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) },
-                        onClick = {
-                            isMenuExpanded = false
-                            onPreviousEntry()
-                        }
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text("Previous Article") },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) },
+                    enabled = onPreviousEntry != null,
+                    onClick = {
+                        isMenuExpanded = false
+                        onPreviousEntry?.invoke()
+                    }
+                )
 
-                if (onNextEntry != null) {
-                    DropdownMenuItem(
-                        text = { Text("Next Article") },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
-                        onClick = {
-                            isMenuExpanded = false
-                            onNextEntry()
-                        }
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text("Next Article") },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
+                    enabled = onNextEntry != null,
+                    onClick = {
+                        isMenuExpanded = false
+                        onNextEntry?.invoke()
+                    }
+                )
             }
         }
     }

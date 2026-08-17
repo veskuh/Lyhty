@@ -3,8 +3,10 @@ package net.veskuh.lyhty.ui.screens
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -55,10 +57,10 @@ class EntryReaderPaneTest {
 
         composeTestRule.waitForIdle()
 
-        // Verify shortened toolbar button labels
-        composeTestRule.onNodeWithText("Full Text").assertIsDisplayed()
+        // Verify icon button accessibility description in compact view
+        composeTestRule.onNodeWithContentDescription("Full Text").assertIsDisplayed()
 
-        composeTestRule.onNode(hasText("Full Text") and hasClickAction())
+        composeTestRule.onNode(hasContentDescription("Full Text") and hasClickAction())
             .performClick()
         assertTrue(fetchFullTextTapped)
     }

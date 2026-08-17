@@ -45,9 +45,13 @@ interface EntryDao {
     @Transaction
     suspend fun upsertEntriesWithFts(entries: List<EntryEntity>) {
         if (entries.isEmpty()) return
+        val pendingBefore = getPendingSyncEntries().associateBy { it.id }
         val entryIds = entries.map { it.id }
         deleteFtsIndex(entryIds)
         insertEntriesRaw(entries)
+        pendingBefore.forEach { (id, pendingEntity) ->
+            updateEntryStatus(id, pendingEntity.status)
+        }
         insertFtsIndex(entryIds)
     }
 

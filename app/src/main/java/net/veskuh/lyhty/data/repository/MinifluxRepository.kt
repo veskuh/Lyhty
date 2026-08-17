@@ -27,6 +27,7 @@ interface MinifluxRepository {
     suspend fun syncEntries(status: String? = null, offset: Int = 0, limit: Int = 100)
     suspend fun markEntryAsRead(entryId: Long)
     suspend fun markEntryAsUnread(entryId: Long)
+    suspend fun markEntriesAsRead(entryIds: List<Long>)
     suspend fun fetchServerFullText(entryId: Long): String
     suspend fun flushPendingSyncs()
     suspend fun clearLocalDatabase()

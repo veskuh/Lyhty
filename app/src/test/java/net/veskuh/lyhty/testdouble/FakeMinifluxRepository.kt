@@ -101,6 +101,12 @@ class FakeMinifluxRepository : MinifluxRepository {
         }
     }
 
+    override suspend fun markEntriesAsRead(entryIds: List<Long>) {
+        entriesState.value = entriesState.value.map {
+            if (it.id in entryIds) it.copy(status = "read") else it
+        }
+    }
+
     override suspend fun fetchServerFullText(entryId: Long): String {
         val extracted = "<article><h1>Full Extracted Text</h1><p>Full content text</p></article>"
         entriesState.value = entriesState.value.map {
