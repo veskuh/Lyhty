@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+
 @Composable
 fun EntryListPane(
     entries: List<EntryEntity>,
@@ -41,6 +44,7 @@ fun EntryListPane(
     onSelectEntry: (EntryEntity) -> Unit,
     onSetStatusFilter: (String?) -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -52,6 +56,24 @@ fun EntryListPane(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
+            if (onBack != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to Tree")
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Feeds & Categories",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
             // Search Bar (Universal icon 🔍 allowed + Clear button)
             OutlinedTextField(
                 value = searchQuery,

@@ -256,9 +256,11 @@ fun LyhtyAdaptiveApp(
                                 unreadCountsByFeed = uiState.unreadCountsByFeed,
                                 onSelectCategory = { category ->
                                     viewModel.selectCategory(category)
+                                    navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                 },
                                 onSelectFeed = { feed ->
                                     viewModel.selectFeed(feed)
+                                    navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                 },
                                 onSync = { viewModel.refreshAll() },
                                 onOpenSettings = { showSettingsDialog = true }
@@ -293,7 +295,12 @@ fun LyhtyAdaptiveApp(
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, entry.id)
                                     },
                                     onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
-                                    onSearchQueryChange = { query -> viewModel.setSearchQuery(query) }
+                                    onSearchQueryChange = { query -> viewModel.setSearchQuery(query) },
+                                    onBack = {
+                                        if (navigator.canNavigateBack()) {
+                                            navigator.navigateBack()
+                                        }
+                                    }
                                 )
                             }
                         }
