@@ -257,10 +257,6 @@ class MinifluxMainViewModel @Inject constructor(
             if (activeReadingList.isEmpty() || activeReadingList.none { it.id == entryId }) {
                 activeReadingList = uiState.value.entries
             }
-            val entry = activeReadingList.find { it.id == entryId } ?: uiState.value.entries.find { it.id == entryId }
-            if (entry != null && entry.status == "unread") {
-                markAsRead(entryId)
-            }
         }
     }
 
