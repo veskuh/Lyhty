@@ -3,6 +3,7 @@ package net.veskuh.lyhty.ui.screens
 import android.content.Intent
 import android.net.Uri
 import android.text.Html
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -42,10 +48,32 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextLayoutResult
+import android.graphics.Typeface
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
+import android.text.style.URLSpan
+import android.text.style.UnderlineSpan
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.veskuh.lyhty.data.local.entity.EntryEntity
@@ -284,18 +312,120 @@ fun EntryReaderPane(
         }
     }
 
+private sealed interface ReaderBlock {
+    data class Text(val content: AnnotatedString) : ReaderBlock
+    data class Image(val url: String, val alt: String = "") : ReaderBlock
+}
+
+private fun Spanned.toAnnotatedString(primaryColor: Color): AnnotatedString {
+    return buildAnnotatedString {
+        append(this@toAnnotatedString.toString())
+        val spans = getSpans(0, length, Any::class.java)
+        for (span in spans) {
+            val start = getSpanStart(span)
+            val end = getSpanEnd(span)
+            when (span) {
+                is StyleSpan -> {
+                    when (span.style) {
+                        Typeface.BOLD -> addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
+                        Typeface.ITALIC -> addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
+                        Typeface.BOLD_ITALIC -> addStyle(SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic), start, end)
+                    }
+                }
+                is UnderlineSpan -> addStyle(SpanStyle(textDecoration = TextDecoration.Underline), start, end)
+                is StrikethroughSpan -> addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough), start, end)
+                is URLSpan -> {
+                    val urlStr = span.url ?: ""
+                    if (urlStr.isNotBlank()) {
+                        addStringAnnotation(tag = "URL", annotation = urlStr, start = start, end = end)
+                        addStyle(
+                            SpanStyle(
+                                color = primaryColor,
+                                textDecoration = TextDecoration.Underline,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            start,
+                            end
+                        )
+                    }
+                }
+                is TypefaceSpan -> {
+                    if (span.family == "monospace") {
+                        addStyle(SpanStyle(fontFamily = FontFamily.Monospace), start, end)
+                    }
+                }
+                is ForegroundColorSpan -> addStyle(SpanStyle(color = Color(span.foregroundColor)), start, end)
+            }
+        }
+    }
+}
+
 @Composable
 private fun ReaderContent(
     entry: EntryEntity,
     fontSizeScale: Float
 ) {
     val scrollState = rememberScrollState()
-    val plainText = remember(entry.id, entry.content) {
-        try {
-            Html.fromHtml(entry.content, Html.FROM_HTML_MODE_COMPACT).toString().trim()
-        } catch (_: Throwable) {
-            entry.content
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val uriHandler = LocalUriHandler.current
+    val blocks = remember(entry.id, entry.content, primaryColor) {
+        if (entry.content.isBlank()) return@remember emptyList<ReaderBlock>()
+        val imgRegex = Regex("(?i)<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>")
+        val result = mutableListOf<ReaderBlock>()
+
+        val htmlWithBreaks = entry.content
+            .replace(Regex("(?i)<p[^>]*>"), "")
+            .replace(Regex("(?i)</p>"), "\n\n")
+            .replace(Regex("(?i)<div[^>]*>"), "")
+            .replace(Regex("(?i)</div>"), "\n\n")
+            .replace(Regex("(?i)<br\\s*/?>"), "\n")
+            .replace(Regex("(?i)<h[1-6][^>]*>"), "\n\n")
+            .replace(Regex("(?i)</h[1-6]>"), "\n\n")
+
+        var lastIndex = 0
+        imgRegex.findAll(htmlWithBreaks).forEach { matchResult ->
+            val textPart = htmlWithBreaks.substring(lastIndex, matchResult.range.first)
+            val imgUrl = matchResult.groupValues[1]
+            val altMatch = Regex("(?i)alt=[\"']([^\"']+)[\"']").find(matchResult.value)
+            val altText = altMatch?.groupValues?.get(1) ?: ""
+
+            if (textPart.isNotBlank()) {
+                textPart.split(Regex("\n{2,}")).forEach { paragraphStr ->
+                    val spanned = try {
+                        Html.fromHtml(paragraphStr.trim(), Html.FROM_HTML_MODE_LEGACY)
+                    } catch (_: Throwable) {
+                        android.text.SpannableString(paragraphStr.trim())
+                    }
+                    val annotated = spanned.toAnnotatedString(primaryColor)
+                    if (annotated.text.isNotBlank()) {
+                        result.add(ReaderBlock.Text(annotated))
+                    }
+                }
+            }
+
+            if (imgUrl.isNotBlank()) {
+                result.add(ReaderBlock.Image(url = imgUrl, alt = altText))
+            }
+
+            lastIndex = matchResult.range.last + 1
         }
+
+        if (lastIndex < htmlWithBreaks.length) {
+            val remainingText = htmlWithBreaks.substring(lastIndex)
+            remainingText.split(Regex("\n{2,}")).forEach { paragraphStr ->
+                val spanned = try {
+                    Html.fromHtml(paragraphStr.trim(), Html.FROM_HTML_MODE_LEGACY)
+                } catch (_: Throwable) {
+                    android.text.SpannableString(paragraphStr.trim())
+                }
+                val annotated = spanned.toAnnotatedString(primaryColor)
+                if (annotated.text.isNotBlank()) {
+                    result.add(ReaderBlock.Text(annotated))
+                }
+            }
+        }
+
+        result
     }
 
     Column(
@@ -329,13 +459,63 @@ private fun ReaderContent(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Text(
-                text = plainText.ifBlank { "No content preview available." },
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = (16 * fontSizeScale).sp,
-                    lineHeight = (24 * fontSizeScale).sp
+
+            if (blocks.isEmpty()) {
+                Text(
+                    text = "No content preview available.",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = (16 * fontSizeScale).sp,
+                        lineHeight = (26 * fontSizeScale).sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
-            )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    blocks.forEach { block ->
+                        when (block) {
+                            is ReaderBlock.Text -> {
+                                val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+                                Text(
+                                    text = block.content,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = (16 * fontSizeScale).sp,
+                                        lineHeight = (26 * fontSizeScale).sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+                                    onTextLayout = { layoutResult.value = it },
+                                    modifier = Modifier.pointerInput(Unit) {
+                                        detectTapGestures { pos ->
+                                            layoutResult.value?.let { layout ->
+                                                val offset = layout.getOffsetForPosition(pos)
+                                                block.content.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                                    .firstOrNull()?.let { annotation ->
+                                                        try {
+                                                            uriHandler.openUri(annotation.item)
+                                                        } catch (_: Throwable) {}
+                                                    }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                            is ReaderBlock.Image -> {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(block.url)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = block.alt.ifBlank { "Article image" },
+                                    contentScale = ContentScale.FillWidth,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
