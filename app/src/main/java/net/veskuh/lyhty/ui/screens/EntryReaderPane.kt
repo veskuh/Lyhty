@@ -2,26 +2,58 @@ package net.veskuh.lyhty.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.graphics.Typeface
 import android.text.Html
+import android.text.Spanned
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StrikethroughSpan
+import android.text.style.StyleSpan
+import android.text.style.TypefaceSpan
+import android.text.style.URLSpan
+import android.text.style.UnderlineSpan
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -48,38 +80,14 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.TextLayoutResult
-import android.graphics.Typeface
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.TypefaceSpan
-import android.text.style.URLSpan
-import android.text.style.UnderlineSpan
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.ui.components.DevicePosture
 import net.veskuh.lyhty.ui.components.PostureInfo
 import net.veskuh.lyhty.ui.state.ReaderTheme
+import net.veskuh.lyhty.util.DateFormatter
 
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
@@ -315,9 +323,11 @@ fun EntryReaderPane(
 private sealed interface ReaderBlock {
     data class Text(val content: AnnotatedString) : ReaderBlock
     data class Image(val url: String, val alt: String = "") : ReaderBlock
+    data class Quote(val content: AnnotatedString) : ReaderBlock
+    data class ListItem(val content: AnnotatedString) : ReaderBlock
 }
 
-private fun Spanned.toAnnotatedString(primaryColor: Color): AnnotatedString {
+private fun Spanned.toAnnotatedString(primaryColor: Color, fontSizeScale: Float, density: Float): AnnotatedString {
     return buildAnnotatedString {
         append(this@toAnnotatedString.toString())
         val spans = getSpans(0, length, Any::class.java)
@@ -331,6 +341,14 @@ private fun Spanned.toAnnotatedString(primaryColor: Color): AnnotatedString {
                         Typeface.ITALIC -> addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
                         Typeface.BOLD_ITALIC -> addStyle(SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic), start, end)
                     }
+                }
+                is RelativeSizeSpan -> {
+                    val targetSize = (16 * span.sizeChange * fontSizeScale).sp
+                    addStyle(SpanStyle(fontSize = targetSize), start, end)
+                }
+                is AbsoluteSizeSpan -> {
+                    val sizeSp = if (span.dip) (span.size * fontSizeScale).sp else ((span.size / density) * fontSizeScale).sp
+                    addStyle(SpanStyle(fontSize = sizeSp), start, end)
                 }
                 is UnderlineSpan -> addStyle(SpanStyle(textDecoration = TextDecoration.Underline), start, end)
                 is StrikethroughSpan -> addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough), start, end)
@@ -354,7 +372,106 @@ private fun Spanned.toAnnotatedString(primaryColor: Color): AnnotatedString {
                         addStyle(SpanStyle(fontFamily = FontFamily.Monospace), start, end)
                     }
                 }
-                is ForegroundColorSpan -> addStyle(SpanStyle(color = Color(span.foregroundColor)), start, end)
+                is ForegroundColorSpan -> {
+                    // Ignore raw HTML colors so theme contrast stays crisp on OLED black
+                }
+            }
+        }
+    }
+}
+
+private fun extractImageBlock(imgTagStr: String): ReaderBlock.Image? {
+    val srcMatch = Regex("(?i)src=[\"']([^\"']+)[\"']").find(imgTagStr)
+    val altMatch = Regex("(?i)alt=[\"']([^\"']+)[\"']").find(imgTagStr)
+    val imgUrl = srcMatch?.groupValues?.get(1) ?: ""
+    val altText = altMatch?.groupValues?.get(1) ?: ""
+    return if (imgUrl.isNotBlank()) ReaderBlock.Image(url = imgUrl, alt = altText) else null
+}
+
+private fun parseHtmlToAnnotatedString(
+    rawText: String,
+    primaryColor: Color,
+    fontSizeScale: Float,
+    density: Float
+): AnnotatedString {
+    val htmlWithBreaks = rawText
+        .replace(Regex("(?i)<p[^>]*>"), "")
+        .replace(Regex("(?i)</p>"), "\n\n")
+        .replace(Regex("(?i)<div[^>]*>"), "")
+        .replace(Regex("(?i)</div>"), "\n\n")
+        .replace(Regex("(?i)<cite[^>]*>"), "\n\n")
+        .replace(Regex("(?i)</cite>"), "")
+        .replace(Regex("(?i)<br\\s*/?>"), "\n")
+        .replace(Regex("(?i)</h[1-6]>"), "\n\n")
+        .replace(Regex("(?i)</ul>"), "\n\n")
+        .replace(Regex("(?i)</ol>"), "\n\n")
+
+    val spanned = try {
+        Html.fromHtml(htmlWithBreaks.trim(), Html.FROM_HTML_MODE_LEGACY)
+    } catch (_: Throwable) {
+        android.text.SpannableString(htmlWithBreaks.trim())
+    }
+    return spanned.toAnnotatedString(primaryColor, fontSizeScale, density)
+}
+
+private fun parseContainerInnerHtml(
+    innerHtml: String,
+    primaryColor: Color,
+    fontSizeScale: Float,
+    density: Float,
+    wrapBlock: (AnnotatedString) -> ReaderBlock,
+    onBlock: (ReaderBlock) -> Unit
+) {
+    val imgPattern = Regex("(?i)<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>")
+    var lastIndex = 0
+
+    imgPattern.findAll(innerHtml).forEach { match ->
+        val textPart = innerHtml.substring(lastIndex, match.range.first).trim()
+        if (textPart.isNotBlank()) {
+            val annotated = parseHtmlToAnnotatedString(textPart, primaryColor, fontSizeScale, density)
+            if (annotated.text.isNotBlank()) {
+                onBlock(wrapBlock(annotated))
+            }
+        }
+
+        extractImageBlock(match.value)?.let { onBlock(it) }
+        lastIndex = match.range.last + 1
+    }
+
+    if (lastIndex < innerHtml.length) {
+        val remainingText = innerHtml.substring(lastIndex).trim()
+        if (remainingText.isNotBlank()) {
+            val annotated = parseHtmlToAnnotatedString(remainingText, primaryColor, fontSizeScale, density)
+            if (annotated.text.isNotBlank()) {
+                onBlock(wrapBlock(annotated))
+            }
+        }
+    }
+}
+
+private fun parseHtmlParagraphs(
+    rawText: String,
+    primaryColor: Color,
+    fontSizeScale: Float,
+    density: Float,
+    onText: (AnnotatedString) -> Unit
+) {
+    val htmlWithBreaks = rawText
+        .replace(Regex("(?i)<p[^>]*>"), "")
+        .replace(Regex("(?i)</p>"), "\n\n")
+        .replace(Regex("(?i)<div[^>]*>"), "")
+        .replace(Regex("(?i)</div>"), "\n\n")
+        .replace(Regex("(?i)<br\\s*/?>"), "\n")
+        .replace(Regex("(?i)</h[1-6]>"), "\n\n")
+        .replace(Regex("(?i)</ul>"), "\n\n")
+        .replace(Regex("(?i)</ol>"), "\n\n")
+
+    htmlWithBreaks.split(Regex("\n{2,}")).forEach { paragraphStr ->
+        val trimmed = paragraphStr.trim()
+        if (trimmed.isNotBlank()) {
+            val annotated = parseHtmlToAnnotatedString(trimmed, primaryColor, fontSizeScale, density)
+            if (annotated.text.isNotBlank()) {
+                onText(annotated)
             }
         }
     }
@@ -368,60 +485,42 @@ private fun ReaderContent(
     val scrollState = rememberScrollState()
     val primaryColor = MaterialTheme.colorScheme.primary
     val uriHandler = LocalUriHandler.current
-    val blocks = remember(entry.id, entry.content, primaryColor) {
+    val density = LocalDensity.current.density
+    val blocks = remember(entry.id, entry.content, primaryColor, fontSizeScale, density) {
         if (entry.content.isBlank()) return@remember emptyList<ReaderBlock>()
-        val imgRegex = Regex("(?i)<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>")
         val result = mutableListOf<ReaderBlock>()
 
-        val htmlWithBreaks = entry.content
-            .replace(Regex("(?i)<p[^>]*>"), "")
-            .replace(Regex("(?i)</p>"), "\n\n")
-            .replace(Regex("(?i)<div[^>]*>"), "")
-            .replace(Regex("(?i)</div>"), "\n\n")
-            .replace(Regex("(?i)<br\\s*/?>"), "\n")
-            .replace(Regex("(?i)<h[1-6][^>]*>"), "\n\n")
-            .replace(Regex("(?i)</h[1-6]>"), "\n\n")
+        val blockPattern = Regex("(?is)(<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>|<blockquote[^>]*>.*?</blockquote>|<li[^>]*>.*?</li>)")
 
         var lastIndex = 0
-        imgRegex.findAll(htmlWithBreaks).forEach { matchResult ->
-            val textPart = htmlWithBreaks.substring(lastIndex, matchResult.range.first)
-            val imgUrl = matchResult.groupValues[1]
-            val altMatch = Regex("(?i)alt=[\"']([^\"']+)[\"']").find(matchResult.value)
-            val altText = altMatch?.groupValues?.get(1) ?: ""
+        blockPattern.findAll(entry.content).forEach { match ->
+            val textPart = entry.content.substring(lastIndex, match.range.first)
+            parseHtmlParagraphs(textPart, primaryColor, fontSizeScale, density) { annotated ->
+                result.add(ReaderBlock.Text(annotated))
+            }
 
-            if (textPart.isNotBlank()) {
-                textPart.split(Regex("\n{2,}")).forEach { paragraphStr ->
-                    val spanned = try {
-                        Html.fromHtml(paragraphStr.trim(), Html.FROM_HTML_MODE_LEGACY)
-                    } catch (_: Throwable) {
-                        android.text.SpannableString(paragraphStr.trim())
-                    }
-                    val annotated = spanned.toAnnotatedString(primaryColor)
-                    if (annotated.text.isNotBlank()) {
-                        result.add(ReaderBlock.Text(annotated))
-                    }
+            val matchedValue = match.value
+            if (matchedValue.startsWith("<img", ignoreCase = true)) {
+                extractImageBlock(matchedValue)?.let { result.add(it) }
+            } else if (matchedValue.startsWith("<blockquote", ignoreCase = true)) {
+                val innerHtml = matchedValue.replace(Regex("(?is)^<blockquote[^>]*>|</blockquote>$"), "")
+                parseContainerInnerHtml(innerHtml, primaryColor, fontSizeScale, density, wrapBlock = { ReaderBlock.Quote(it) }) { block ->
+                    result.add(block)
+                }
+            } else if (matchedValue.startsWith("<li", ignoreCase = true)) {
+                val innerHtml = matchedValue.replace(Regex("(?is)^<li[^>]*>|</li>$"), "")
+                parseContainerInnerHtml(innerHtml, primaryColor, fontSizeScale, density, wrapBlock = { ReaderBlock.ListItem(it) }) { block ->
+                    result.add(block)
                 }
             }
 
-            if (imgUrl.isNotBlank()) {
-                result.add(ReaderBlock.Image(url = imgUrl, alt = altText))
-            }
-
-            lastIndex = matchResult.range.last + 1
+            lastIndex = match.range.last + 1
         }
 
-        if (lastIndex < htmlWithBreaks.length) {
-            val remainingText = htmlWithBreaks.substring(lastIndex)
-            remainingText.split(Regex("\n{2,}")).forEach { paragraphStr ->
-                val spanned = try {
-                    Html.fromHtml(paragraphStr.trim(), Html.FROM_HTML_MODE_LEGACY)
-                } catch (_: Throwable) {
-                    android.text.SpannableString(paragraphStr.trim())
-                }
-                val annotated = spanned.toAnnotatedString(primaryColor)
-                if (annotated.text.isNotBlank()) {
-                    result.add(ReaderBlock.Text(annotated))
-                }
+        if (lastIndex < entry.content.length) {
+            val remainingText = entry.content.substring(lastIndex)
+            parseHtmlParagraphs(remainingText, primaryColor, fontSizeScale, density) { annotated ->
+                result.add(ReaderBlock.Text(annotated))
             }
         }
 
@@ -453,11 +552,27 @@ private fun ReaderContent(
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Published ${entry.publishedAt} ${if (entry.author.isNotBlank()) "by ${entry.author}" else ""}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
+            val formattedDate = remember(entry.publishedAt) {
+                DateFormatter.formatRelativeTime(entry.publishedAt)
+            }
+            val subtitleText = remember(formattedDate, entry.author) {
+                buildString {
+                    if (formattedDate.isNotBlank()) {
+                        append(formattedDate)
+                    }
+                    if (entry.author.isNotBlank()) {
+                        if (isNotEmpty()) append(" • ")
+                        append("by ${entry.author}")
+                    }
+                }
+            }
+            if (subtitleText.isNotBlank()) {
+                Text(
+                    text = subtitleText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
             Spacer(modifier = Modifier.height(20.dp))
 
             if (blocks.isEmpty()) {
@@ -474,40 +589,84 @@ private fun ReaderContent(
                     blocks.forEach { block ->
                         when (block) {
                             is ReaderBlock.Text -> {
-                                val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-                                Text(
-                                    text = block.content,
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = (16 * fontSizeScale).sp,
-                                        lineHeight = (26 * fontSizeScale).sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                                    onTextLayout = { layoutResult.value = it },
-                                    modifier = Modifier.pointerInput(Unit) {
-                                        detectTapGestures { pos ->
-                                            layoutResult.value?.let { layout ->
-                                                val offset = layout.getOffsetForPosition(pos)
-                                                block.content.getStringAnnotations(tag = "URL", start = offset, end = offset)
-                                                    .firstOrNull()?.let { annotation ->
-                                                        try {
-                                                            uriHandler.openUri(annotation.item)
-                                                        } catch (_: Throwable) {}
-                                                    }
-                                            }
-                                        }
+                                ReaderTextBlock(
+                                    content = block.content,
+                                    fontSizeScale = fontSizeScale,
+                                    onOpenUrl = { url ->
+                                        try {
+                                            uriHandler.openUri(url)
+                                        } catch (_: Throwable) {}
                                     }
                                 )
+                            }
+                            is ReaderBlock.Quote -> {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(IntrinsicSize.Min)
+                                        .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
+                                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
+                                        .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(4.dp)
+                                            .fillMaxHeight()
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    ReaderTextBlock(
+                                        content = block.content,
+                                        fontSizeScale = fontSizeScale,
+                                        onOpenUrl = { url ->
+                                            try {
+                                                uriHandler.openUri(url)
+                                            } catch (_: Throwable) {}
+                                        },
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                }
+                            }
+                            is ReaderBlock.ListItem -> {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Text(
+                                        text = "• ",
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = (16 * fontSizeScale).sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    ReaderTextBlock(
+                                        content = block.content,
+                                        fontSizeScale = fontSizeScale,
+                                        onOpenUrl = { url ->
+                                            try {
+                                                uriHandler.openUri(url)
+                                            } catch (_: Throwable) {}
+                                        }
+                                    )
+                                }
                             }
                             is ReaderBlock.Image -> {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
                                         .data(block.url)
+                                        .decoderFactory(SvgDecoder.Factory())
                                         .crossfade(true)
                                         .build(),
                                     contentDescription = block.alt.ifBlank { "Article image" },
-                                    contentScale = ContentScale.FillWidth,
+                                    contentScale = ContentScale.Fit,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .heightIn(max = 480.dp)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 )
@@ -518,6 +677,37 @@ private fun ReaderContent(
             }
         }
     }
+}
+
+@Composable
+private fun ReaderTextBlock(
+    content: AnnotatedString,
+    fontSizeScale: Float,
+    onOpenUrl: (String) -> Unit,
+    fontStyle: FontStyle = FontStyle.Normal
+) {
+    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+    Text(
+        text = content,
+        style = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = (16 * fontSizeScale).sp,
+            lineHeight = (26 * fontSizeScale).sp,
+            fontStyle = fontStyle
+        ),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
+        onTextLayout = { layoutResult.value = it },
+        modifier = Modifier.pointerInput(content) {
+            detectTapGestures { pos ->
+                layoutResult.value?.let { layout ->
+                    val offset = layout.getOffsetForPosition(pos)
+                    content.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                        .firstOrNull()?.let { annotation ->
+                            onOpenUrl(annotation.item)
+                        }
+                }
+            }
+        }
+    )
 }
 
 @Composable

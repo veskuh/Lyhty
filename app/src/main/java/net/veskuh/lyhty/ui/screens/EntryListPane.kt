@@ -26,12 +26,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.veskuh.lyhty.data.local.entity.EntryEntity
+import net.veskuh.lyhty.util.DateFormatter
 
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
@@ -160,11 +162,16 @@ fun EntryListPane(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = entry.publishedAt,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
+                                val formattedDate = remember(entry.publishedAt) {
+                                    DateFormatter.formatRelativeTime(entry.publishedAt)
+                                }
+                                if (formattedDate.isNotBlank()) {
+                                    Text(
+                                        text = formattedDate,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
                             }
                         }
                     }
