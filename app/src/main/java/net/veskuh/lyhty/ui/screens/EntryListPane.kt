@@ -41,6 +41,8 @@ import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.util.DateFormatter
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 @Composable
 fun EntryListPane(
@@ -54,6 +56,8 @@ fun EntryListPane(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val haptics = LocalHapticFeedback.current
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = Color.Black
@@ -69,7 +73,10 @@ fun EntryListPane(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onBack != null) {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onBack()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -95,7 +102,10 @@ fun EntryListPane(
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { onSearchQueryChange("") }) {
+                        IconButton(onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onSearchQueryChange("")
+                        }) {
                             Icon(Icons.Default.Clear, contentDescription = "Clear search")
                         }
                     }
@@ -111,12 +121,18 @@ fun EntryListPane(
             ) {
                 FilterChip(
                     selected = statusFilter == "unread",
-                    onClick = { onSetStatusFilter("unread") },
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSetStatusFilter("unread")
+                    },
                     label = { Text("Unread (${entries.count { it.status == "unread" }})") }
                 )
                 FilterChip(
                     selected = statusFilter == null,
-                    onClick = { onSetStatusFilter(null) },
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSetStatusFilter(null)
+                    },
                     label = { Text("All Entries (${entries.size})") }
                 )
             }
@@ -144,7 +160,10 @@ fun EntryListPane(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onSelectEntry(entry) },
+                                .clickable {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSelectEntry(entry)
+                                },
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isSelected) {
                                     MaterialTheme.colorScheme.primaryContainer

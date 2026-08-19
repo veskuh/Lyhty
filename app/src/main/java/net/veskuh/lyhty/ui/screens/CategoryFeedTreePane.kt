@@ -49,6 +49,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+
 @Composable
 fun CategoryFeedTreePane(
     categories: List<CategoryEntity>,
@@ -65,6 +68,7 @@ fun CategoryFeedTreePane(
     onOpenSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val haptics = LocalHapticFeedback.current
     val activeFeedId = selectedFeed?.id ?: selectedEntry?.feedId
 
     val visibleFeeds = remember(feeds, unreadCountsByFeed, showOnlyUnreadFeeds, activeFeedId) {
@@ -177,6 +181,7 @@ fun CategoryFeedTreePane(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         onSelectCategory(null)
                                         onSelectFeed(null)
                                     },
@@ -231,7 +236,10 @@ fun CategoryFeedTreePane(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { onSelectCategory(category) },
+                                        .clickable {
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onSelectCategory(category)
+                                        },
                                     colors = CardDefaults.cardColors(
                                         containerColor = if (isCatSelected) {
                                             MaterialTheme.colorScheme.primaryContainer
@@ -278,7 +286,10 @@ fun CategoryFeedTreePane(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(start = 24.dp, top = 4.dp)
-                                            .clickable { onSelectFeed(feed) },
+                                            .clickable {
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                onSelectFeed(feed)
+                                            },
                                         colors = CardDefaults.cardColors(
                                             containerColor = if (isFeedSelected) {
                                                 MaterialTheme.colorScheme.secondaryContainer

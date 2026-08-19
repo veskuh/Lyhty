@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -106,6 +107,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.pointer.pointerInput
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+
 @Composable
 fun EntryReaderPane(
     entry: EntryEntity?,
@@ -125,6 +138,7 @@ fun EntryReaderPane(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -154,56 +168,78 @@ fun EntryReaderPane(
         val windowAdaptiveInfo = currentWindowAdaptiveInfo()
         val isCompact = windowAdaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
 
-            var totalDragX by remember { mutableFloatStateOf(0f) }
-            var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
-            var slideDirection by remember { androidx.compose.runtime.mutableIntStateOf(1) }
-            val entryCache = remember { mutableStateMapOf<Long, EntryEntity>() }
-            entryCache[entry.id] = entry
+        var totalDragX by remember { mutableFloatStateOf(0f) }
+        var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
+        var slideDirection by remember { androidx.compose.runtime.mutableIntStateOf(1) }
+        val entryCache = remember { mutableStateMapOf<Long, EntryEntity>() }
+        entryCache[entry.id] = entry
 
-            val gestureModifier = Modifier.pointerInput(entry.id) {
-                detectHorizontalDragGestures(
-                    onDragStart = { totalDragX = 0f },
-                    onDragEnd = {
-                        val thresholdPx = 60.dp.toPx()
-                        if (totalDragX < -thresholdPx) {
-                            // Swiped Left -> Next Article (slide in from Right)
-                            slideDirection = 1
-                            val moved = onNextEntry?.invoke() ?: false
-                            if (!moved) {
-                                if (!isAtEndSignaled) {
-                                    isAtEndSignaled = true
-                                    Toast.makeText(
-                                        context,
-                                        "End of current list. Swipe again to jump to next unread feed.",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+        val scrollState = remember(entry.id) { ScrollState(initial = 0) }
+        val rawProgress = if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue.toFloat() else 0f
+        val animatedProgress by animateFloatAsState(
+            targetValue = rawProgress.coerceIn(0f, 1f),
+            label = "ReaderReadingProgress"
+        )
+
+        val gestureModifier = Modifier.pointerInput(entry.id) {
+            detectHorizontalDragGestures(
+                onDragStart = { totalDragX = 0f },
+                onDragEnd = {
+                    val thresholdPx = 60.dp.toPx()
+                    if (totalDragX < -thresholdPx) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        // Swiped Left -> Next Article (slide in from Right)
+                        slideDirection = 1
+                        val moved = onNextEntry?.invoke() ?: false
+                        if (!moved) {
+                            if (!isAtEndSignaled) {
+                                isAtEndSignaled = true
+                                Toast.makeText(
+                                    context,
+                                    "End of current list. Swipe again to jump to next unread feed.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                val nextFeedTitle = onAdvanceToNextFeed?.invoke()
+                                if (nextFeedTitle != null) {
+                                    Toast.makeText(context, "Switched to $nextFeedTitle", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    val nextFeedTitle = onAdvanceToNextFeed?.invoke()
-                                    if (nextFeedTitle != null) {
-                                        Toast.makeText(context, "Switched to $nextFeedTitle", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
-                                    }
+                                    Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                        } else if (totalDragX > thresholdPx) {
-                            // Swiped Right -> Previous Article (slide in from Left)
-                            slideDirection = -1
-                            val moved = onPreviousEntry?.invoke() ?: false
-                            if (!moved) {
-                                Toast.makeText(context, "First article in current list", Toast.LENGTH_SHORT).show()
-                            }
                         }
-                    },
-                    onHorizontalDrag = { _, dragAmount ->
-                        totalDragX += dragAmount
+                    } else if (totalDragX > thresholdPx) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        // Swiped Right -> Previous Article (slide in from Left)
+                        slideDirection = -1
+                        val moved = onPreviousEntry?.invoke() ?: false
+                        if (!moved) {
+                            Toast.makeText(context, "First article in current list", Toast.LENGTH_SHORT).show()
+                        }
                     }
+                },
+                onHorizontalDrag = { _, dragAmount ->
+                    totalDragX += dragAmount
+                }
+            )
+        }
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Slender Reading Progress Indicator (2.dp)
+            if (rawProgress > 0f) {
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.Transparent
                 )
             }
 
             if (isFlexMode) {
                 // Tabletop Flex Mode split (Top: Content, Bottom: Miniflux Desk)
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     // Top Half Display (Reader Content)
                     Box(
                         modifier = Modifier
@@ -224,8 +260,27 @@ fun EntryReaderPane(
                             label = "ReaderContentFlexTransition"
                         ) { targetId ->
                             val cachedEntry = entryCache[targetId] ?: entry
-                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale)
+                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale, scrollState = scrollState)
                         }
+
+                        ReaderQuickJumpPill(
+                            scrollState = scrollState,
+                            hasNextEntry = onNextEntry != null,
+                            hasNextFeed = onAdvanceToNextFeed != null,
+                            onJumpNext = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                slideDirection = 1
+                                val moved = onNextEntry?.invoke() ?: false
+                                if (!moved) {
+                                    val nextFeedTitle = onAdvanceToNextFeed?.invoke()
+                                    if (nextFeedTitle != null) {
+                                        Toast.makeText(context, "Switched to $nextFeedTitle", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     // Bottom Half Display (Miniflux Action Desk)
@@ -291,8 +346,27 @@ fun EntryReaderPane(
                             label = "ReaderContentFlatTransition"
                         ) { targetId ->
                             val cachedEntry = entryCache[targetId] ?: entry
-                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale)
+                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale, scrollState = scrollState)
                         }
+
+                        ReaderQuickJumpPill(
+                            scrollState = scrollState,
+                            hasNextEntry = onNextEntry != null,
+                            hasNextFeed = onAdvanceToNextFeed != null,
+                            onJumpNext = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                slideDirection = 1
+                                val moved = onNextEntry?.invoke() ?: false
+                                if (!moved) {
+                                    val nextFeedTitle = onAdvanceToNextFeed?.invoke()
+                                    if (nextFeedTitle != null) {
+                                        Toast.makeText(context, "Switched to $nextFeedTitle", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -319,6 +393,52 @@ fun EntryReaderPane(
             }
         }
     }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ReaderQuickJumpPill(
+    scrollState: ScrollState,
+    hasNextEntry: Boolean,
+    hasNextFeed: Boolean,
+    onJumpNext: () -> Unit
+) {
+    val isNearEnd = scrollState.maxValue > 0 && scrollState.value >= scrollState.maxValue - 200
+    androidx.compose.animation.AnimatedVisibility(
+        visible = scrollState.value > 120 && (hasNextEntry || hasNextFeed),
+        enter = fadeIn() + slideInVertically { it / 2 },
+        exit = fadeOut() + slideOutVertically { it / 2 },
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(bottom = 16.dp, end = 16.dp)
+    ) {
+        Surface(
+            onClick = onJumpNext,
+            shape = RoundedCornerShape(24.dp),
+            color = if (isNearEnd) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (isNearEnd) Icons.Default.DoneAll else Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = if (isNearEnd) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isNearEnd) "Next Feed ➔" else "Next Article",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isNearEnd) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
 
 private sealed interface ReaderBlock {
     data class Text(val content: AnnotatedString) : ReaderBlock
@@ -480,9 +600,9 @@ private fun parseHtmlParagraphs(
 @Composable
 private fun ReaderContent(
     entry: EntryEntity,
-    fontSizeScale: Float
+    fontSizeScale: Float,
+    scrollState: ScrollState = rememberScrollState()
 ) {
-    val scrollState = rememberScrollState()
     val primaryColor = MaterialTheme.colorScheme.primary
     val uriHandler = LocalUriHandler.current
     val density = LocalDensity.current.density
