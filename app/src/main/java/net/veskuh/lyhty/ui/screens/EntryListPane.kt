@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.util.DateFormatter
 
+import androidx.compose.ui.graphics.Color
+
 @Composable
 fun EntryListPane(
     entries: List<EntryEntity>,
@@ -54,7 +56,7 @@ fun EntryListPane(
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface
+        color = Color.Black
     ) {
         Column(
             modifier = Modifier

@@ -44,6 +44,11 @@ import androidx.compose.material.icons.filled.FolderOpen
 
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+
 @Composable
 fun CategoryFeedTreePane(
     categories: List<CategoryEntity>,
@@ -93,23 +98,26 @@ fun CategoryFeedTreePane(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface
+        color = Color.Black
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
-            // Header Row
+            // Header Image (header.png)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Feeds",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                Image(
+                    painter = painterResource(net.veskuh.lyhty.R.drawable.header),
+                    contentDescription = "Lyhty",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart
                 )
             }
 
@@ -152,7 +160,7 @@ fun CategoryFeedTreePane(
                             Button(onClick = { onOpenSettings?.invoke() }) {
                                 Icon(imageVector = Icons.Default.Settings, contentDescription = null)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (categories.isEmpty() && feeds.isEmpty()) "⚙️ Configure Server" else "⚙️ Settings")
+                                Text(if (categories.isEmpty() && feeds.isEmpty()) "Configure Server" else "Settings")
                             }
                         }
                     }

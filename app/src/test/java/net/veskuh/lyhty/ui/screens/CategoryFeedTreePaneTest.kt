@@ -42,7 +42,7 @@ class CategoryFeedTreePaneTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Feeds").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Lyhty").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Refresh Feeds").assertIsDisplayed()
         composeTestRule.onNodeWithText("Tech").assertIsDisplayed()
 
