@@ -89,6 +89,8 @@ import net.veskuh.lyhty.ui.components.DevicePosture
 import net.veskuh.lyhty.ui.components.PostureInfo
 import net.veskuh.lyhty.ui.state.ReaderTheme
 import net.veskuh.lyhty.util.DateFormatter
+import net.veskuh.lyhty.util.HtmlParserUtil
+import net.veskuh.lyhty.util.ReaderBlock
 
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.widthIn
@@ -440,163 +442,6 @@ private fun androidx.compose.foundation.layout.BoxScope.ReaderQuickJumpPill(
     }
 }
 
-private sealed interface ReaderBlock {
-    data class Text(val content: AnnotatedString) : ReaderBlock
-    data class Image(val url: String, val alt: String = "") : ReaderBlock
-    data class Quote(val content: AnnotatedString) : ReaderBlock
-    data class ListItem(val content: AnnotatedString) : ReaderBlock
-}
-
-private fun Spanned.toAnnotatedString(primaryColor: Color, fontSizeScale: Float, density: Float): AnnotatedString {
-    return buildAnnotatedString {
-        append(this@toAnnotatedString.toString())
-        val spans = getSpans(0, length, Any::class.java)
-        for (span in spans) {
-            val start = getSpanStart(span)
-            val end = getSpanEnd(span)
-            when (span) {
-                is StyleSpan -> {
-                    when (span.style) {
-                        Typeface.BOLD -> addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, end)
-                        Typeface.ITALIC -> addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, end)
-                        Typeface.BOLD_ITALIC -> addStyle(SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic), start, end)
-                    }
-                }
-                is RelativeSizeSpan -> {
-                    val targetSize = (16 * span.sizeChange * fontSizeScale).sp
-                    addStyle(SpanStyle(fontSize = targetSize), start, end)
-                }
-                is AbsoluteSizeSpan -> {
-                    val sizeSp = if (span.dip) (span.size * fontSizeScale).sp else ((span.size / density) * fontSizeScale).sp
-                    addStyle(SpanStyle(fontSize = sizeSp), start, end)
-                }
-                is UnderlineSpan -> addStyle(SpanStyle(textDecoration = TextDecoration.Underline), start, end)
-                is StrikethroughSpan -> addStyle(SpanStyle(textDecoration = TextDecoration.LineThrough), start, end)
-                is URLSpan -> {
-                    val urlStr = span.url ?: ""
-                    if (urlStr.isNotBlank()) {
-                        addStringAnnotation(tag = "URL", annotation = urlStr, start = start, end = end)
-                        addStyle(
-                            SpanStyle(
-                                color = primaryColor,
-                                textDecoration = TextDecoration.Underline,
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            start,
-                            end
-                        )
-                    }
-                }
-                is TypefaceSpan -> {
-                    if (span.family == "monospace") {
-                        addStyle(SpanStyle(fontFamily = FontFamily.Monospace), start, end)
-                    }
-                }
-                is ForegroundColorSpan -> {
-                    // Ignore raw HTML colors so theme contrast stays crisp on OLED black
-                }
-            }
-        }
-    }
-}
-
-private fun extractImageBlock(imgTagStr: String): ReaderBlock.Image? {
-    val srcMatch = Regex("(?i)src=[\"']([^\"']+)[\"']").find(imgTagStr)
-    val altMatch = Regex("(?i)alt=[\"']([^\"']+)[\"']").find(imgTagStr)
-    val imgUrl = srcMatch?.groupValues?.get(1) ?: ""
-    val altText = altMatch?.groupValues?.get(1) ?: ""
-    return if (imgUrl.isNotBlank()) ReaderBlock.Image(url = imgUrl, alt = altText) else null
-}
-
-private fun parseHtmlToAnnotatedString(
-    rawText: String,
-    primaryColor: Color,
-    fontSizeScale: Float,
-    density: Float
-): AnnotatedString {
-    val htmlWithBreaks = rawText
-        .replace(Regex("(?i)<p[^>]*>"), "")
-        .replace(Regex("(?i)</p>"), "\n\n")
-        .replace(Regex("(?i)<div[^>]*>"), "")
-        .replace(Regex("(?i)</div>"), "\n\n")
-        .replace(Regex("(?i)<cite[^>]*>"), "\n\n")
-        .replace(Regex("(?i)</cite>"), "")
-        .replace(Regex("(?i)<br\\s*/?>"), "\n")
-        .replace(Regex("(?i)</h[1-6]>"), "\n\n")
-        .replace(Regex("(?i)</ul>"), "\n\n")
-        .replace(Regex("(?i)</ol>"), "\n\n")
-
-    val spanned = try {
-        Html.fromHtml(htmlWithBreaks.trim(), Html.FROM_HTML_MODE_LEGACY)
-    } catch (_: Throwable) {
-        android.text.SpannableString(htmlWithBreaks.trim())
-    }
-    return spanned.toAnnotatedString(primaryColor, fontSizeScale, density)
-}
-
-private fun parseContainerInnerHtml(
-    innerHtml: String,
-    primaryColor: Color,
-    fontSizeScale: Float,
-    density: Float,
-    wrapBlock: (AnnotatedString) -> ReaderBlock,
-    onBlock: (ReaderBlock) -> Unit
-) {
-    val imgPattern = Regex("(?i)<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>")
-    var lastIndex = 0
-
-    imgPattern.findAll(innerHtml).forEach { match ->
-        val textPart = innerHtml.substring(lastIndex, match.range.first).trim()
-        if (textPart.isNotBlank()) {
-            val annotated = parseHtmlToAnnotatedString(textPart, primaryColor, fontSizeScale, density)
-            if (annotated.text.isNotBlank()) {
-                onBlock(wrapBlock(annotated))
-            }
-        }
-
-        extractImageBlock(match.value)?.let { onBlock(it) }
-        lastIndex = match.range.last + 1
-    }
-
-    if (lastIndex < innerHtml.length) {
-        val remainingText = innerHtml.substring(lastIndex).trim()
-        if (remainingText.isNotBlank()) {
-            val annotated = parseHtmlToAnnotatedString(remainingText, primaryColor, fontSizeScale, density)
-            if (annotated.text.isNotBlank()) {
-                onBlock(wrapBlock(annotated))
-            }
-        }
-    }
-}
-
-private fun parseHtmlParagraphs(
-    rawText: String,
-    primaryColor: Color,
-    fontSizeScale: Float,
-    density: Float,
-    onText: (AnnotatedString) -> Unit
-) {
-    val htmlWithBreaks = rawText
-        .replace(Regex("(?i)<p[^>]*>"), "")
-        .replace(Regex("(?i)</p>"), "\n\n")
-        .replace(Regex("(?i)<div[^>]*>"), "")
-        .replace(Regex("(?i)</div>"), "\n\n")
-        .replace(Regex("(?i)<br\\s*/?>"), "\n")
-        .replace(Regex("(?i)</h[1-6]>"), "\n\n")
-        .replace(Regex("(?i)</ul>"), "\n\n")
-        .replace(Regex("(?i)</ol>"), "\n\n")
-
-    htmlWithBreaks.split(Regex("\n{2,}")).forEach { paragraphStr ->
-        val trimmed = paragraphStr.trim()
-        if (trimmed.isNotBlank()) {
-            val annotated = parseHtmlToAnnotatedString(trimmed, primaryColor, fontSizeScale, density)
-            if (annotated.text.isNotBlank()) {
-                onText(annotated)
-            }
-        }
-    }
-}
-
 @Composable
 private fun ReaderContent(
     entry: EntryEntity,
@@ -607,44 +452,7 @@ private fun ReaderContent(
     val uriHandler = LocalUriHandler.current
     val density = LocalDensity.current.density
     val blocks = remember(entry.id, entry.content, primaryColor, fontSizeScale, density) {
-        if (entry.content.isBlank()) return@remember emptyList<ReaderBlock>()
-        val result = mutableListOf<ReaderBlock>()
-
-        val blockPattern = Regex("(?is)(<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>|<blockquote[^>]*>.*?</blockquote>|<li[^>]*>.*?</li>)")
-
-        var lastIndex = 0
-        blockPattern.findAll(entry.content).forEach { match ->
-            val textPart = entry.content.substring(lastIndex, match.range.first)
-            parseHtmlParagraphs(textPart, primaryColor, fontSizeScale, density) { annotated ->
-                result.add(ReaderBlock.Text(annotated))
-            }
-
-            val matchedValue = match.value
-            if (matchedValue.startsWith("<img", ignoreCase = true)) {
-                extractImageBlock(matchedValue)?.let { result.add(it) }
-            } else if (matchedValue.startsWith("<blockquote", ignoreCase = true)) {
-                val innerHtml = matchedValue.replace(Regex("(?is)^<blockquote[^>]*>|</blockquote>$"), "")
-                parseContainerInnerHtml(innerHtml, primaryColor, fontSizeScale, density, wrapBlock = { ReaderBlock.Quote(it) }) { block ->
-                    result.add(block)
-                }
-            } else if (matchedValue.startsWith("<li", ignoreCase = true)) {
-                val innerHtml = matchedValue.replace(Regex("(?is)^<li[^>]*>|</li>$"), "")
-                parseContainerInnerHtml(innerHtml, primaryColor, fontSizeScale, density, wrapBlock = { ReaderBlock.ListItem(it) }) { block ->
-                    result.add(block)
-                }
-            }
-
-            lastIndex = match.range.last + 1
-        }
-
-        if (lastIndex < entry.content.length) {
-            val remainingText = entry.content.substring(lastIndex)
-            parseHtmlParagraphs(remainingText, primaryColor, fontSizeScale, density) { annotated ->
-                result.add(ReaderBlock.Text(annotated))
-            }
-        }
-
-        result
+        HtmlParserUtil.parseHtmlToBlocks(entry.content, primaryColor, fontSizeScale, density)
     }
 
     Column(
