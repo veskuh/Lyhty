@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.FeedEntity
@@ -124,59 +125,21 @@ fun CategoryFeedTreePane(
                 }
             } else {
                 // Categories & Feeds Tree List
+                val totalUnreadCount = unreadCountsByFeed.values.sum()
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                // "All Unread" Entry Shortcut
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onSelectCategory(null)
-                                onSelectFeed(null)
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selectedCategory == null && selectedFeed == null) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            }
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.RssFeed, contentDescription = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "All Unread Feeds",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Categories & Nested Feeds Tree
-                items(categories, key = { it.id }) { category ->
-                    val isCatSelected = selectedCategory?.id == category.id && selectedFeed == null
-                    val catUnreadCount = unreadCountsByCategory[category.id] ?: 0
-                    val childFeeds = feeds.filter { it.categoryId == category.id }
-
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // Category Header Card
+                    // "All Unread" Entry Shortcut
+                    item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onSelectCategory(category) },
+                                .clickable {
+                                    onSelectCategory(null)
+                                    onSelectFeed(null)
+                                },
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isCatSelected) {
+                                containerColor = if (selectedCategory == null && selectedFeed == null) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
                                     MaterialTheme.colorScheme.surfaceContainerHigh
@@ -190,58 +153,123 @@ fun CategoryFeedTreePane(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Folder, contentDescription = null)
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.RssFeed, contentDescription = null)
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = category.title,
-                                        style = MaterialTheme.typography.bodyLarge
+                                        text = "All Unread Feeds",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                if (catUnreadCount > 0) {
+                                if (totalUnreadCount > 0) {
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Badge {
-                                        Text(text = "$catUnreadCount")
+                                        Text(text = "$totalUnreadCount")
                                     }
                                 }
                             }
                         }
+                    }
 
-                        // Child Feeds List under Category
-                        childFeeds.forEach { feed ->
-                            val isFeedSelected = selectedFeed?.id == feed.id
-                            val feedUnreadCount = unreadCountsByFeed[feed.id] ?: 0
+                    // Categories & Nested Feeds Tree
+                    items(categories, key = { it.id }) { category ->
+                        val isCatSelected = selectedCategory?.id == category.id && selectedFeed == null
+                        val childFeeds = feeds.filter { it.categoryId == category.id }
+                        val dbCatCount = unreadCountsByCategory[category.id] ?: 0
+                        val childFeedsCount = childFeeds.sumOf { unreadCountsByFeed[it.id] ?: 0 }
+                        val catUnreadCount = maxOf(dbCatCount, childFeedsCount)
 
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Category Header Card
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 24.dp, top = 4.dp)
-                                    .clickable { onSelectFeed(feed) },
+                                    .clickable { onSelectCategory(category) },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isFeedSelected) {
-                                        MaterialTheme.colorScheme.secondaryContainer
+                                    containerColor = if (isCatSelected) {
+                                        MaterialTheme.colorScheme.primaryContainer
                                     } else {
-                                        MaterialTheme.colorScheme.surfaceContainerLow
+                                        MaterialTheme.colorScheme.surfaceContainerHigh
                                     }
                                 )
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(10.dp),
+                                        .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.RssFeed, contentDescription = null)
-                                        Spacer(modifier = Modifier.width(10.dp))
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Folder, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(12.dp))
                                         Text(
-                                            text = feed.title,
-                                            style = MaterialTheme.typography.bodyMedium
+                                            text = category.title,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    if (feedUnreadCount > 0) {
+                                    if (catUnreadCount > 0) {
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Badge {
-                                            Text(text = "$feedUnreadCount")
+                                            Text(text = "$catUnreadCount")
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Child Feeds List under Category
+                            childFeeds.forEach { feed ->
+                                val isFeedSelected = selectedFeed?.id == feed.id
+                                val feedUnreadCount = unreadCountsByFeed[feed.id] ?: 0
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 24.dp, top = 4.dp)
+                                        .clickable { onSelectFeed(feed) },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isFeedSelected) {
+                                            MaterialTheme.colorScheme.secondaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceContainerLow
+                                        }
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.RssFeed, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text(
+                                                text = feed.title,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        if (feedUnreadCount > 0) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Badge {
+                                                Text(text = "$feedUnreadCount")
+                                            }
                                         }
                                     }
                                 }
@@ -252,5 +280,4 @@ fun CategoryFeedTreePane(
             }
         }
     }
-}
 }

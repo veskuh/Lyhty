@@ -20,7 +20,7 @@ interface CategoryDao {
     @Query("DELETE FROM categories WHERE id = :categoryId")
     suspend fun deleteCategory(categoryId: Long)
 
-    @Query("SELECT categoryId, COUNT(*) AS count FROM entries WHERE status = 'unread' AND categoryId IS NOT NULL GROUP BY categoryId")
+    @Query("SELECT feeds.categoryId AS categoryId, COUNT(*) AS count FROM entries INNER JOIN feeds ON entries.feedId = feeds.id WHERE entries.status = 'unread' AND feeds.categoryId IS NOT NULL GROUP BY feeds.categoryId")
     fun getUnreadCountsByCategory(): Flow<List<CategoryUnreadCount>>
 
     @Query("DELETE FROM categories")
