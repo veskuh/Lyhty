@@ -5,11 +5,12 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 object DateFormatter {
 
-    private val sameYearFormatter = DateTimeFormatter.ofPattern("MMM d")
-    private val differentYearFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
+    private val sameYearFormatter = DateTimeFormatter.ofPattern("MMM d", Locale.US)
+    private val differentYearFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US)
 
     /**
      * Formats an ISO-8601 or epoch timestamp string into a human-readable relative time string.

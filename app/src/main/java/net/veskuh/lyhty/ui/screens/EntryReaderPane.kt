@@ -624,7 +624,8 @@ private fun ReaderContent(
                                                 uriHandler.openUri(url)
                                             } catch (_: Throwable) {}
                                         },
-                                        fontStyle = FontStyle.Italic
+                                        fontStyle = FontStyle.Italic,
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
@@ -651,7 +652,8 @@ private fun ReaderContent(
                                             try {
                                                 uriHandler.openUri(url)
                                             } catch (_: Throwable) {}
-                                        }
+                                        },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
@@ -684,7 +686,8 @@ private fun ReaderTextBlock(
     content: AnnotatedString,
     fontSizeScale: Float,
     onOpenUrl: (String) -> Unit,
-    fontStyle: FontStyle = FontStyle.Normal
+    fontStyle: FontStyle = FontStyle.Normal,
+    modifier: Modifier = Modifier
 ) {
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
     Text(
@@ -696,7 +699,7 @@ private fun ReaderTextBlock(
         ),
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
         onTextLayout = { layoutResult.value = it },
-        modifier = Modifier.pointerInput(content) {
+        modifier = modifier.pointerInput(content) {
             detectTapGestures { pos ->
                 layoutResult.value?.let { layout ->
                     val offset = layout.getOffsetForPosition(pos)

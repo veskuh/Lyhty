@@ -268,4 +268,49 @@ class HtmlReaderParsingTest {
         composeTestRule.onNodeWithText("Nemanja Trifunovic", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("tiered approach fascinating", substring = true).assertIsDisplayed()
     }
+
+    @Test
+    fun readerRendersBulletedListForCoalitionsPost() {
+        val htmlContent = """
+            <p><a href="https://www.manton.org/2026/08/18/when-i-blogged-a-couple.html">My post earlier about X</a> didn&rsquo;t resonate exactly as I had intended. Let me zoom out.</p>
+            <p>Let&rsquo;s think of proponents of the social web as a coalition. People actively choose to be on the fediverse, atmosphere, and (though it&rsquo;s a dated term) blogosphere. There are people who:</p>
+            <ul>
+            <li>Dislike Elon Musk for political reasons.</li>
+            <li>See federation as the answer to developer-hostile platforms.</li>
+            <li>Want a more distributed web with personal blogs.</li>
+            <li>Hope smaller communities will encourage civility.</li>
+            <li>Care deeply about web standards.</li>
+            </ul>
+            <p>These are all different things. Which of these matters most to you will shape your perspective.</p>
+        """.trimIndent()
+
+        val entry = EntryEntity(
+            id = 188254,
+            feedId = 2,
+            feedTitle = "Manton Reece",
+            title = "Coalitions",
+            content = htmlContent,
+            status = "unread"
+        )
+
+        composeTestRule.setContent {
+            EntryReaderPane(
+                entry = entry,
+                postureInfo = PostureInfo(DevicePosture.NORMAL),
+                fontSizeScale = 1.0f,
+                onFetchFullText = {},
+                onMarkRead = {},
+                onMarkUnread = {},
+                onNextEntry = null,
+                onPreviousEntry = null
+            )
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Dislike Elon Musk for political reasons.", substring = true).assertExists()
+        composeTestRule.onNodeWithText("See federation as the answer to developer-hostile platforms.", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Want a more distributed web with personal blogs.", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Hope smaller communities will encourage civility.", substring = true).assertExists()
+        composeTestRule.onNodeWithText("Care deeply about web standards.", substring = true).assertExists()
+    }
 }
