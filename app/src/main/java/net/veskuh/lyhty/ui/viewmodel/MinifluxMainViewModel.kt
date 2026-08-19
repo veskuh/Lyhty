@@ -84,6 +84,7 @@ class MinifluxMainViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     private val _readerTheme = MutableStateFlow(configRepository?.getReaderThemeSync() ?: ReaderTheme.OLED_DARK)
     private val _fontSizeScale = MutableStateFlow(configRepository?.getFontSizeScaleSync() ?: 1.0f)
+    private val _showOnlyUnreadFeeds = MutableStateFlow(configRepository?.getShowOnlyUnreadFeedsSync() ?: true)
     private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
     private val _currentError = MutableStateFlow<net.veskuh.lyhty.util.LyhtyError?>(null)
@@ -152,6 +153,7 @@ class MinifluxMainViewModel @Inject constructor(
         _searchQuery,
         _readerTheme,
         _fontSizeScale,
+        _showOnlyUnreadFeeds,
         _errorMessage,
         _currentError
     ) { flows: Array<Any?> ->
@@ -160,8 +162,9 @@ class MinifluxMainViewModel @Inject constructor(
             query = flows[0] as String,
             theme = flows[1] as ReaderTheme,
             fontScale = flows[2] as Float,
-            error = flows[3] as String?,
-            currentErr = flows[4] as net.veskuh.lyhty.util.LyhtyError?
+            showOnlyUnread = flows[3] as Boolean,
+            error = flows[4] as String?,
+            currentErr = flows[5] as net.veskuh.lyhty.util.LyhtyError?
         )
     }
 
@@ -184,6 +187,7 @@ class MinifluxMainViewModel @Inject constructor(
             currentError = s3.currentErr,
             fontSizeScale = s3.fontScale,
             readerTheme = s3.theme,
+            showOnlyUnreadFeeds = s3.showOnlyUnread,
             unreadCountsByFeed = s1.feedCounts,
             unreadCountsByCategory = s1.catCounts
         )
@@ -195,6 +199,13 @@ class MinifluxMainViewModel @Inject constructor(
 
     init {
         refreshAll()
+    }
+
+    fun setShowOnlyUnreadFeeds(showOnlyUnreadFeeds: Boolean) {
+        _showOnlyUnreadFeeds.value = showOnlyUnreadFeeds
+        viewModelScope.launch {
+            configRepository?.saveShowOnlyUnreadFeeds(showOnlyUnreadFeeds)
+        }
     }
 
     fun refreshAll() {
@@ -399,6 +410,7 @@ class MinifluxMainViewModel @Inject constructor(
         val query: String,
         val theme: ReaderTheme,
         val fontScale: Float,
+        val showOnlyUnread: Boolean,
         val error: String?,
         val currentErr: net.veskuh.lyhty.util.LyhtyError? = null
     )

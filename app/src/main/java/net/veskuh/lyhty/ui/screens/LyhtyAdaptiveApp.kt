@@ -156,8 +156,10 @@ fun LyhtyAdaptiveApp(
                         feeds = uiState.feeds,
                         selectedCategory = uiState.selectedCategory,
                         selectedFeed = uiState.selectedFeed,
+                        selectedEntry = uiState.selectedEntry,
                         unreadCountsByCategory = uiState.unreadCountsByCategory,
                         unreadCountsByFeed = uiState.unreadCountsByFeed,
+                        showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                         onSelectCategory = { category ->
                             isSettingsOpen = false
                             viewModel.selectCategory(category)
@@ -179,12 +181,14 @@ fun LyhtyAdaptiveApp(
                                 currentLogLevel = viewModel.getLogLevel(),
                                 fontSizeScale = uiState.fontSizeScale,
                                 readerTheme = uiState.readerTheme,
+                                showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                                 isLoading = uiState.isLoading,
                                 hasError = uiState.currentError != null,
                                 onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
                                 onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
                                 onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
                                 onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
+                                onSetShowOnlyUnreadFeeds = { showUnread -> viewModel.setShowOnlyUnreadFeeds(showUnread) },
                                 onBack = { isSettingsOpen = false }
                             )
                         } else if (uiState.selectedEntry != null) {
@@ -228,12 +232,14 @@ fun LyhtyAdaptiveApp(
                         currentLogLevel = viewModel.getLogLevel(),
                         fontSizeScale = uiState.fontSizeScale,
                         readerTheme = uiState.readerTheme,
+                        showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                         isLoading = uiState.isLoading,
                         hasError = uiState.currentError != null,
                         onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
                         onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
                         onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
                         onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
+                        onSetShowOnlyUnreadFeeds = { showUnread -> viewModel.setShowOnlyUnreadFeeds(showUnread) },
                         onBack = { isSettingsOpen = false }
                     )
                 } else {
@@ -248,8 +254,10 @@ fun LyhtyAdaptiveApp(
                                     feeds = uiState.feeds,
                                     selectedCategory = uiState.selectedCategory,
                                     selectedFeed = uiState.selectedFeed,
+                                    selectedEntry = uiState.selectedEntry,
                                     unreadCountsByCategory = uiState.unreadCountsByCategory,
                                     unreadCountsByFeed = uiState.unreadCountsByFeed,
+                                    showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                                     onSelectCategory = { category ->
                                         viewModel.selectCategory(category)
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)

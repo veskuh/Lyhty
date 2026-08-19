@@ -66,6 +66,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import net.veskuh.lyhty.ui.state.ReaderTheme
+import androidx.compose.material3.Switch
 import net.veskuh.lyhty.util.LogLevel
 import net.veskuh.lyhty.util.LyhtyLogger
 
@@ -77,12 +78,14 @@ fun SettingsPane(
     currentLogLevel: LogLevel,
     fontSizeScale: Float,
     readerTheme: ReaderTheme,
+    showOnlyUnreadFeeds: Boolean = true,
     isLoading: Boolean = false,
     hasError: Boolean = false,
     onSaveConfig: (String, String) -> Unit,
     onSaveLogLevel: (LogLevel) -> Unit,
     onSetTheme: (ReaderTheme) -> Unit,
     onSetFontSizeScale: (Float) -> Unit,
+    onSetShowOnlyUnreadFeeds: ((Boolean) -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -260,7 +263,52 @@ fun SettingsPane(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- SECTION 2: Miniflux Connection ---
+                    // --- SECTION 2: Feed Navigation ---
+                    Text(
+                        text = "Feed Navigation",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Hide feeds with no unread items",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Only show feeds and categories that currently have unread articles.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (onSetShowOnlyUnreadFeeds != null) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Switch(
+                                    checked = showOnlyUnreadFeeds,
+                                    onCheckedChange = onSetShowOnlyUnreadFeeds
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- SECTION 3: Miniflux Connection ---
                     Text(
                         text = "Miniflux Server Connection",
                         style = MaterialTheme.typography.titleMedium,

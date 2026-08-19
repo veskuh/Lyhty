@@ -14,6 +14,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class CategoryFeedTreePaneTest {
@@ -31,17 +33,121 @@ class CategoryFeedTreePaneTest {
                 feeds = listOf(FeedEntity(10, "TechCrunch")),
                 selectedCategory = null,
                 selectedFeed = null,
+                unreadCountsByFeed = mapOf(10L to 3),
+                unreadCountsByCategory = mapOf(1L to 3),
+                showOnlyUnreadFeeds = true,
                 onSelectCategory = {},
                 onSelectFeed = {},
                 onSync = { syncTapped = true }
             )
         }
 
-        composeTestRule.onNodeWithText("Feeds & Categories").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Sync").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Feeds").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Refresh Feeds").assertIsDisplayed()
         composeTestRule.onNodeWithText("Tech").assertIsDisplayed()
 
-        composeTestRule.onNodeWithText("Sync").performClick()
+        composeTestRule.onNodeWithContentDescription("Refresh Feeds").performClick()
         assertTrue(syncTapped)
+    }
+
+    @Test
+    fun categoryFeedTreePaneFiltersEmptyFeedsWhenShowOnlyUnreadIsTrue() {
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(
+                    CategoryEntity(1, "Unread Cat"),
+                    CategoryEntity(2, "Empty Cat")
+                ),
+                feeds = listOf(
+                    FeedEntity(10, "Unread Feed", categoryId = 1),
+                    FeedEntity(20, "Empty Feed", categoryId = 2)
+                ),
+                selectedCategory = null,
+                selectedFeed = null,
+                unreadCountsByFeed = mapOf(10L to 5),
+                unreadCountsByCategory = mapOf(1L to 5),
+                showOnlyUnreadFeeds = true,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Unread Cat").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Empty Cat").assertDoesNotExist()
+    }
+
+    @Test
+    fun categoryFeedTreePaneShowsEmptyFeedsWhenShowOnlyUnreadIsFalse() {
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(
+                    CategoryEntity(1, "Unread Cat"),
+                    CategoryEntity(2, "Empty Cat")
+                ),
+                feeds = listOf(
+                    FeedEntity(10, "Unread Feed", categoryId = 1),
+                    FeedEntity(20, "Empty Feed", categoryId = 2)
+                ),
+                selectedCategory = null,
+                selectedFeed = null,
+                unreadCountsByFeed = mapOf(10L to 5),
+                unreadCountsByCategory = mapOf(1L to 5),
+                showOnlyUnreadFeeds = false,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Unread Cat").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Empty Cat").assertIsDisplayed()
+    }
+
+    @Test
+    fun categoryFeedTreePaneRendersUncategorizedFeeds() {
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(CategoryEntity(1, "Tech")),
+                feeds = listOf(
+                    FeedEntity(10, "TechCrunch", categoryId = 1),
+                    FeedEntity(20, "Orphan Feed", categoryId = null)
+                ),
+                selectedCategory = null,
+                selectedFeed = null,
+                unreadCountsByFeed = mapOf(10L to 2, 20L to 4),
+                unreadCountsByCategory = mapOf(1L to 2),
+                showOnlyUnreadFeeds = true,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Uncategorized").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Orphan Feed").assertIsDisplayed()
+    }
+
+    @Test
+    fun categoryFeedTreePaneKeepsActiveFeedVisibleWhenUnreadReachesZero() {
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(CategoryEntity(1, "Tech")),
+                feeds = listOf(
+                    FeedEntity(10, "TechCrunch", categoryId = 1)
+                ),
+                selectedCategory = null,
+                selectedFeed = FeedEntity(10, "TechCrunch", categoryId = 1),
+                unreadCountsByFeed = mapOf(10L to 0),
+                unreadCountsByCategory = mapOf(1L to 0),
+                showOnlyUnreadFeeds = true,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Tech").assertIsDisplayed()
+        composeTestRule.onNodeWithText("TechCrunch").assertIsDisplayed()
     }
 }

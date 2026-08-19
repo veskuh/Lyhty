@@ -12,7 +12,8 @@ data class MinifluxConfig(
     val apiKey: String = "",
     val logLevel: LogLevel = LogLevel.DEBUG,
     val readerTheme: ReaderTheme = ReaderTheme.OLED_DARK,
-    val fontSizeScale: Float = 1.0f
+    val fontSizeScale: Float = 1.0f,
+    val showOnlyUnreadFeeds: Boolean = true
 )
 
 interface MinifluxConfigRepository {
@@ -21,11 +22,13 @@ interface MinifluxConfigRepository {
     suspend fun saveLogLevel(logLevel: LogLevel)
     suspend fun saveReaderTheme(readerTheme: ReaderTheme)
     suspend fun saveFontSizeScale(fontSizeScale: Float)
+    suspend fun saveShowOnlyUnreadFeeds(showOnlyUnreadFeeds: Boolean)
     fun getApiKeySync(): String
     fun getServerUrlSync(): String
     fun getLogLevelSync(): LogLevel
     fun getReaderThemeSync(): ReaderTheme
     fun getFontSizeScaleSync(): Float
+    fun getShowOnlyUnreadFeedsSync(): Boolean
 }
 
 class FakeMinifluxConfigRepository(
@@ -33,7 +36,8 @@ class FakeMinifluxConfigRepository(
     initialKey: String = "",
     initialLogLevel: LogLevel = LogLevel.DEBUG,
     initialReaderTheme: ReaderTheme = ReaderTheme.OLED_DARK,
-    initialFontSizeScale: Float = 1.0f
+    initialFontSizeScale: Float = 1.0f,
+    initialShowOnlyUnreadFeeds: Boolean = true
 ) : MinifluxConfigRepository {
 
     private val _config = MutableStateFlow(
@@ -42,7 +46,8 @@ class FakeMinifluxConfigRepository(
             apiKey = initialKey.trim(),
             logLevel = initialLogLevel,
             readerTheme = initialReaderTheme,
-            fontSizeScale = initialFontSizeScale
+            fontSizeScale = initialFontSizeScale,
+            showOnlyUnreadFeeds = initialShowOnlyUnreadFeeds
         )
     )
     override val config: Flow<MinifluxConfig> = _config.asStateFlow()
@@ -63,9 +68,14 @@ class FakeMinifluxConfigRepository(
         _config.value = _config.value.copy(fontSizeScale = fontSizeScale)
     }
 
+    override suspend fun saveShowOnlyUnreadFeeds(showOnlyUnreadFeeds: Boolean) {
+        _config.value = _config.value.copy(showOnlyUnreadFeeds = showOnlyUnreadFeeds)
+    }
+
     override fun getApiKeySync(): String = _config.value.apiKey.trim()
     override fun getServerUrlSync(): String = _config.value.serverUrl.trim()
     override fun getLogLevelSync(): LogLevel = _config.value.logLevel
     override fun getReaderThemeSync(): ReaderTheme = _config.value.readerTheme
     override fun getFontSizeScaleSync(): Float = _config.value.fontSizeScale
+    override fun getShowOnlyUnreadFeedsSync(): Boolean = _config.value.showOnlyUnreadFeeds
 }

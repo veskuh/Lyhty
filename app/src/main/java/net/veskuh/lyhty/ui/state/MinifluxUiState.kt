@@ -22,6 +22,7 @@ data class MinifluxUiState(
     val currentError: net.veskuh.lyhty.util.LyhtyError? = null,
     val fontSizeScale: Float = 1.0f,
     val readerTheme: ReaderTheme = ReaderTheme.OLED_DARK,
+    val showOnlyUnreadFeeds: Boolean = true,
     val unreadCountsByFeed: Map<Long, Int> = emptyMap(),
     val unreadCountsByCategory: Map<Long, Int> = emptyMap()
 )

@@ -42,7 +42,8 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
             } catch (_: Exception) {
                 ReaderTheme.OLED_DARK
             },
-            fontSizeScale = prefs.getFloat("KEY_FONT_SIZE_SCALE", 1.0f)
+            fontSizeScale = prefs.getFloat("KEY_FONT_SIZE_SCALE", 1.0f),
+            showOnlyUnreadFeeds = prefs.getBoolean("KEY_SHOW_ONLY_UNREAD_FEEDS", true)
         )
     )
 
@@ -86,6 +87,14 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
         _config.value = _config.value.copy(fontSizeScale = fontSizeScale)
     }
 
+    override suspend fun saveShowOnlyUnreadFeeds(showOnlyUnreadFeeds: Boolean) {
+        prefs.edit()
+            .putBoolean("KEY_SHOW_ONLY_UNREAD_FEEDS", showOnlyUnreadFeeds)
+            .commit()
+
+        _config.value = _config.value.copy(showOnlyUnreadFeeds = showOnlyUnreadFeeds)
+    }
+
     override fun getServerUrlSync(): String = (prefs.getString("KEY_SERVER_URL", "") ?: "").trim()
 
     override fun getApiKeySync(): String {
@@ -108,6 +117,10 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
 
     override fun getFontSizeScaleSync(): Float {
         return prefs.getFloat("KEY_FONT_SIZE_SCALE", 1.0f)
+    }
+
+    override fun getShowOnlyUnreadFeedsSync(): Boolean {
+        return prefs.getBoolean("KEY_SHOW_ONLY_UNREAD_FEEDS", true)
     }
 
     companion object {
