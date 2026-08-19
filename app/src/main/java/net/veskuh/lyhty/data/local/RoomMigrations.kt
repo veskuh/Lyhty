@@ -9,6 +9,7 @@ object RoomMigrations {
         override fun migrate(db: SupportSQLiteDatabase) {
             // Explicit Room Migration script handling database schema updates safely
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_entries_categoryId` ON `entries` (`categoryId`)")
+            db.execSQL("DROP TABLE IF EXISTS `sync_queue`")
         }
     }
 }

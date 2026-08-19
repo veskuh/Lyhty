@@ -67,10 +67,7 @@ fun LyhtyTheme(
                 statusBarStyle = statusBarStyle,
                 navigationBarStyle = statusBarStyle
             )
-            activity.window.statusBarColor = android.graphics.Color.TRANSPARENT
-            activity.window.navigationBarColor = android.graphics.Color.TRANSPARENT
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                activity.window.isStatusBarContrastEnforced = false
                 activity.window.isNavigationBarContrastEnforced = false
             }
         }

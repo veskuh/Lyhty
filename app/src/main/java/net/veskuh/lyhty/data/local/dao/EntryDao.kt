@@ -12,11 +12,12 @@ import kotlinx.coroutines.flow.Flow
 interface EntryDao {
 
     @Query("""
-        SELECT * FROM entries 
-        WHERE (:statusFilter IS NULL OR status = :statusFilter)
-          AND (:categoryId IS NULL OR categoryId = :categoryId)
-          AND (:feedId IS NULL OR feedId = :feedId)
-        ORDER BY publishedAt DESC
+        SELECT entries.* FROM entries 
+        LEFT JOIN feeds ON entries.feedId = feeds.id
+        WHERE (:statusFilter IS NULL OR entries.status = :statusFilter)
+          AND (:categoryId IS NULL OR feeds.categoryId = :categoryId)
+          AND (:feedId IS NULL OR entries.feedId = :feedId)
+        ORDER BY entries.publishedAt DESC
         LIMIT :limit OFFSET :offset
     """)
     fun getEntries(

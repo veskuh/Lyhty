@@ -5,7 +5,6 @@ import androidx.test.core.app.ApplicationProvider
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.data.local.entity.FeedEntity
-import net.veskuh.lyhty.data.local.entity.SyncQueueEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -74,23 +73,7 @@ class RoomDatabaseTest {
         assertEquals("Android 15 Foldable Enhancements", searchResults[0].title)
     }
 
-    @Test
-    fun `syncQueue enqueue and dequeue works as expected`() = runTest {
-        val syncItem = SyncQueueEntity(
-            actionType = "MARK_READ",
-            payload = """{"entryId": 101}"""
-        )
 
-        database.syncDao().enqueue(syncItem)
-        val pending = database.syncDao().getAllPendingItems()
-
-        assertEquals(1, pending.size)
-        assertEquals("MARK_READ", pending[0].actionType)
-
-        database.syncDao().deleteItems(listOf(pending[0].id))
-        val emptyList = database.syncDao().getAllPendingItems()
-        assertTrue(emptyList.isEmpty())
-    }
 
     @Test
     fun `unread count SQL queries return group by counts`() = runTest {

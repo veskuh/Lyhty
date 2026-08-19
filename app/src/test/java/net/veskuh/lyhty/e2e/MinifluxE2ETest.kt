@@ -197,17 +197,18 @@ class MinifluxE2ETest {
             simulatedServer.enqueueError(500)
             realRepository.markEntryAsRead(505)
 
-            // Verify local entry updated to read and sync queue logged item
-            val pendingSyncs = db.syncDao().getAllPendingItems()
-            assertEquals("Pending sync queue size", 1, pendingSyncs.size)
-            assertEquals("MARK_READ", pendingSyncs[0].actionType)
+            // Verify local entry updated to read and isSyncPending flag set
+            val pendingSyncs = db.entryDao().getPendingSyncEntries()
+            assertEquals("Pending sync entries size", 1, pendingSyncs.size)
+            assertEquals(505L, pendingSyncs[0].id)
+            assertEquals("read", pendingSyncs[0].status)
 
             // 2. Server recovers, flush queue
             realRepository.flushPendingSyncs()
 
             // Verify queue was flushed cleanly
-            val flushedSyncs = db.syncDao().getAllPendingItems()
-            assertTrue("Queue flushed", flushedSyncs.isEmpty())
+            val flushedSyncs = db.entryDao().getPendingSyncEntries()
+            assertTrue("Pending entries flushed", flushedSyncs.isEmpty())
 
             db.close()
             simulatedServer.shutdown()

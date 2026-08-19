@@ -4,7 +4,6 @@ import net.veskuh.lyhty.data.local.LyhtyDatabase
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.data.local.entity.FeedEntity
-import net.veskuh.lyhty.data.local.entity.SyncQueueEntity
 import net.veskuh.lyhty.data.local.model.CategoryUnreadCount
 import net.veskuh.lyhty.data.local.model.FeedUnreadCount
 import net.veskuh.lyhty.data.network.MinifluxApiService
@@ -13,11 +12,6 @@ import net.veskuh.lyhty.util.LyhtyLogger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-
-@Serializable
-private data class SyncPayload(val entryId: Long)
 
 @Singleton
 class MinifluxRepositoryImpl @Inject constructor(
@@ -121,13 +115,7 @@ class MinifluxRepositoryImpl @Inject constructor(
             database.entryDao().clearPendingSyncFlag(listOf(entryId))
             LyhtyLogger.debug("Repository", "Server successfully confirmed entry $entryId marked READ.")
         } catch (e: Exception) {
-            LyhtyLogger.warn("Repository", "Server update failed for entry $entryId (read). Queuing mutation offline.", e)
-            database.syncDao().enqueue(
-                SyncQueueEntity(
-                    actionType = "MARK_READ",
-                    payload = """{"entryId": $entryId}"""
-                )
-            )
+            LyhtyLogger.warn("Repository", "Server update failed for entry $entryId (read). Retaining isSyncPending flag for offline batch flush.", e)
         }
     }
 
@@ -139,13 +127,7 @@ class MinifluxRepositoryImpl @Inject constructor(
             database.entryDao().clearPendingSyncFlag(listOf(entryId))
             LyhtyLogger.debug("Repository", "Server successfully confirmed entry $entryId marked UNREAD.")
         } catch (e: Exception) {
-            LyhtyLogger.warn("Repository", "Server update failed for entry $entryId (unread). Queuing mutation offline.", e)
-            database.syncDao().enqueue(
-                SyncQueueEntity(
-                    actionType = "MARK_UNREAD",
-                    payload = """{"entryId": $entryId}"""
-                )
-            )
+            LyhtyLogger.warn("Repository", "Server update failed for entry $entryId (unread). Retaining isSyncPending flag for offline batch flush.", e)
         }
     }
 
@@ -160,15 +142,7 @@ class MinifluxRepositoryImpl @Inject constructor(
             database.entryDao().clearPendingSyncFlag(entryIds)
             LyhtyLogger.debug("Repository", "Server confirmed bulk mark READ for ${entryIds.size} entries.")
         } catch (e: Exception) {
-            LyhtyLogger.warn("Repository", "Server bulk update failed for ${entryIds.size} entries. Queuing offline.", e)
-            entryIds.forEach { id ->
-                database.syncDao().enqueue(
-                    SyncQueueEntity(
-                        actionType = "MARK_READ",
-                        payload = """{"entryId":$id}"""
-                    )
-                )
-            }
+            LyhtyLogger.warn("Repository", "Server bulk update failed for ${entryIds.size} entries. Retaining isSyncPending flag for offline batch flush.", e)
         }
     }
 
@@ -211,57 +185,6 @@ class MinifluxRepositoryImpl @Inject constructor(
                 }
             }
         }
-
-        val pendingQueue = database.syncDao().getAllPendingItems()
-        if (pendingQueue.isNotEmpty()) {
-            LyhtyLogger.info("Repository", "Processing ${pendingQueue.size} items from SyncQueue...")
-            val json = Json { ignoreUnknownKeys = true }
-            val readItems = mutableListOf<Pair<Long, Long>>() // queueId to entryId
-            val unreadItems = mutableListOf<Pair<Long, Long>>() // queueId to entryId
-            val processedQueueIds = mutableListOf<Long>()
-
-            for (item in pendingQueue) {
-                try {
-                    val payload = json.decodeFromString<SyncPayload>(item.payload)
-                    when (item.actionType) {
-                        "MARK_READ" -> readItems.add(item.id to payload.entryId)
-                        "MARK_UNREAD" -> unreadItems.add(item.id to payload.entryId)
-                    }
-                } catch (e: Exception) {
-                    LyhtyLogger.warn("Repository", "Invalid SyncQueue payload for item ${item.id}", e)
-                    processedQueueIds.add(item.id)
-                }
-            }
-
-            if (readItems.isNotEmpty()) {
-                try {
-                    val readEntryIds = readItems.map { it.second }.distinct()
-                    apiService.updateEntriesStatus(UpdateStatusRequestDto(readEntryIds, "read"))
-                    processedQueueIds.addAll(readItems.map { it.first })
-                    LyhtyLogger.info("Repository", "Batched flushed ${readEntryIds.size} queued READ items.")
-                } catch (e: Exception) {
-                    LyhtyLogger.warn("Repository", "Failed batched flush of queued READ items", e)
-                    throw e
-                }
-            }
-
-            if (unreadItems.isNotEmpty()) {
-                try {
-                    val unreadEntryIds = unreadItems.map { it.second }.distinct()
-                    apiService.updateEntriesStatus(UpdateStatusRequestDto(unreadEntryIds, "unread"))
-                    processedQueueIds.addAll(unreadItems.map { it.first })
-                    LyhtyLogger.info("Repository", "Batched flushed ${unreadEntryIds.size} queued UNREAD items.")
-                } catch (e: Exception) {
-                    LyhtyLogger.warn("Repository", "Failed batched flush of queued UNREAD items", e)
-                    throw e
-                }
-            }
-
-            if (processedQueueIds.isNotEmpty()) {
-                database.syncDao().deleteItems(processedQueueIds.distinct())
-                LyhtyLogger.info("Repository", "Successfully processed and deleted ${processedQueueIds.size} queue items.")
-            }
-        }
     }
 
     override suspend fun clearLocalDatabase() {
@@ -269,7 +192,6 @@ class MinifluxRepositoryImpl @Inject constructor(
         database.categoryDao().clearAll()
         database.feedDao().clearAll()
         database.entryDao().clearAll()
-        database.syncDao().clearAll()
         LyhtyLogger.info("Repository", "Local database successfully cleared.")
     }
 }

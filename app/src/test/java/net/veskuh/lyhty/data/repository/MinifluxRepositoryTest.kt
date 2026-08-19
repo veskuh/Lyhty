@@ -81,7 +81,7 @@ class MinifluxRepositoryTest {
     }
 
     @Test
-    fun `offline markEntryAsRead enqueues item into sync queue`() = runTest {
+    fun `offline markEntryAsRead flags isSyncPending on entry for batch flush`() = runTest {
         repository.syncCategoriesAndFeeds()
         repository.syncEntries(status = "unread")
 
@@ -90,14 +90,15 @@ class MinifluxRepositoryTest {
 
         repository.markEntryAsRead(101L)
 
-        val pendingSyncItems = database.syncDao().getAllPendingItems()
-        assertEquals(1, pendingSyncItems.size)
-        assertEquals("MARK_READ", pendingSyncItems[0].actionType)
+        val pendingSyncEntries = database.entryDao().getPendingSyncEntries()
+        assertEquals(1, pendingSyncEntries.size)
+        assertEquals(101L, pendingSyncEntries[0].id)
+        assertEquals("read", pendingSyncEntries[0].status)
 
         // Flush pending syncs once server is available
         repository.flushPendingSyncs()
-        val emptyQueue = database.syncDao().getAllPendingItems()
-        assertTrue(emptyQueue.isEmpty())
+        val emptyPending = database.entryDao().getPendingSyncEntries()
+        assertTrue(emptyPending.isEmpty())
     }
 
     @Test

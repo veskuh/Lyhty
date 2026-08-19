@@ -57,7 +57,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
         prefs.edit()
             .putString("KEY_SERVER_URL", cleanUrl)
             .putString("KEY_API_KEY", cleanKey)
-            .commit()
+            .apply()
 
         _config.value = _config.value.copy(serverUrl = cleanUrl, apiKey = cleanKey)
     }
@@ -65,7 +65,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
     override suspend fun saveLogLevel(logLevel: LogLevel) {
         prefs.edit()
             .putString("KEY_LOG_LEVEL", logLevel.name)
-            .commit()
+            .apply()
 
         LyhtyLogger.setLogLevel(logLevel)
         _config.value = _config.value.copy(logLevel = logLevel)
@@ -74,7 +74,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
     override suspend fun saveReaderTheme(readerTheme: ReaderTheme) {
         prefs.edit()
             .putString("KEY_READER_THEME", readerTheme.name)
-            .commit()
+            .apply()
 
         _config.value = _config.value.copy(readerTheme = readerTheme)
     }
@@ -82,7 +82,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
     override suspend fun saveFontSizeScale(fontSizeScale: Float) {
         prefs.edit()
             .putFloat("KEY_FONT_SIZE_SCALE", fontSizeScale)
-            .commit()
+            .apply()
 
         _config.value = _config.value.copy(fontSizeScale = fontSizeScale)
     }
@@ -90,7 +90,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
     override suspend fun saveShowOnlyUnreadFeeds(showOnlyUnreadFeeds: Boolean) {
         prefs.edit()
             .putBoolean("KEY_SHOW_ONLY_UNREAD_FEEDS", showOnlyUnreadFeeds)
-            .commit()
+            .apply()
 
         _config.value = _config.value.copy(showOnlyUnreadFeeds = showOnlyUnreadFeeds)
     }

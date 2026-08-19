@@ -174,38 +174,19 @@ fun LyhtyAdaptiveApp(
                     )
 
                     Box(modifier = Modifier.weight(1.45f).fillMaxSize()) {
+                        val selectedEntry = uiState.selectedEntry
                         if (isSettingsOpen) {
-                            SettingsPane(
-                                initialServerUrl = viewModel.getServerUrl(),
-                                initialApiKey = viewModel.getApiKey(),
-                                currentLogLevel = viewModel.getLogLevel(),
-                                fontSizeScale = uiState.fontSizeScale,
-                                readerTheme = uiState.readerTheme,
-                                showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
-                                isLoading = uiState.isLoading,
-                                hasError = uiState.currentError != null,
-                                onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
-                                onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
-                                onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
-                                onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
-                                onSetShowOnlyUnreadFeeds = { showUnread -> viewModel.setShowOnlyUnreadFeeds(showUnread) },
-                                onBack = { isSettingsOpen = false }
+                            BoundSettingsPane(
+                                viewModel = viewModel,
+                                uiState = uiState,
+                                onClose = { isSettingsOpen = false }
                             )
-                        } else if (uiState.selectedEntry != null) {
-                            EntryReaderPane(
-                                entry = uiState.selectedEntry,
+                        } else if (selectedEntry != null) {
+                            BoundEntryReaderPane(
+                                entry = selectedEntry,
+                                viewModel = viewModel,
+                                uiState = uiState,
                                 postureInfo = postureInfo,
-                                fontSizeScale = uiState.fontSizeScale,
-                                readerTheme = uiState.readerTheme,
-                                onFetchFullText = { id -> viewModel.fetchOriginalContent(id) },
-                                onMarkRead = { id -> viewModel.markAsRead(id) },
-                                onMarkUnread = { id -> viewModel.markAsUnread(id) },
-                                onMarkAllRead = { viewModel.markAllAsRead() },
-                                onNextEntry = { viewModel.selectNextEntry() },
-                                onPreviousEntry = { viewModel.selectPreviousEntry() },
-                                onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },
-                                onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
-                                onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
                                 onBack = { viewModel.selectEntry(null) }
                             )
                         } else {
@@ -226,21 +207,10 @@ fun LyhtyAdaptiveApp(
             } else {
                 // Folded Single-Pane Cover Screen Layout
                 if (isSettingsOpen) {
-                    SettingsPane(
-                        initialServerUrl = viewModel.getServerUrl(),
-                        initialApiKey = viewModel.getApiKey(),
-                        currentLogLevel = viewModel.getLogLevel(),
-                        fontSizeScale = uiState.fontSizeScale,
-                        readerTheme = uiState.readerTheme,
-                        showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
-                        isLoading = uiState.isLoading,
-                        hasError = uiState.currentError != null,
-                        onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
-                        onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
-                        onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
-                        onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
-                        onSetShowOnlyUnreadFeeds = { showUnread -> viewModel.setShowOnlyUnreadFeeds(showUnread) },
-                        onBack = { isSettingsOpen = false }
+                    BoundSettingsPane(
+                        viewModel = viewModel,
+                        uiState = uiState,
+                        onClose = { isSettingsOpen = false }
                     )
                 } else {
                     ListDetailPaneScaffold(
@@ -273,21 +243,13 @@ fun LyhtyAdaptiveApp(
                         },
                         detailPane = {
                             AnimatedPane {
-                                if (uiState.selectedEntry != null) {
-                                    EntryReaderPane(
-                                        entry = uiState.selectedEntry,
+                                val selectedEntry = uiState.selectedEntry
+                                if (selectedEntry != null) {
+                                    BoundEntryReaderPane(
+                                        entry = selectedEntry,
+                                        viewModel = viewModel,
+                                        uiState = uiState,
                                         postureInfo = postureInfo,
-                                        fontSizeScale = uiState.fontSizeScale,
-                                        readerTheme = uiState.readerTheme,
-                                        onFetchFullText = { id -> viewModel.fetchOriginalContent(id) },
-                                        onMarkRead = { id -> viewModel.markAsRead(id) },
-                                        onMarkUnread = { id -> viewModel.markAsUnread(id) },
-                                        onMarkAllRead = { viewModel.markAllAsRead() },
-                                        onNextEntry = { viewModel.selectNextEntry() },
-                                        onPreviousEntry = { viewModel.selectPreviousEntry() },
-                                        onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },
-                                        onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
-                                        onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
                                         onBack = { viewModel.selectEntry(null) }
                                     )
                                 } else {
@@ -316,4 +278,54 @@ fun LyhtyAdaptiveApp(
             }
         }
     }
+}
+
+@Composable
+private fun BoundSettingsPane(
+    viewModel: MinifluxMainViewModel,
+    uiState: net.veskuh.lyhty.ui.state.MinifluxUiState,
+    onClose: () -> Unit
+) {
+    SettingsPane(
+        initialServerUrl = viewModel.getServerUrl(),
+        initialApiKey = viewModel.getApiKey(),
+        currentLogLevel = viewModel.getLogLevel(),
+        fontSizeScale = uiState.fontSizeScale,
+        readerTheme = uiState.readerTheme,
+        showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
+        isLoading = uiState.isLoading,
+        hasError = uiState.currentError != null,
+        onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
+        onSaveLogLevel = { level -> viewModel.setLogLevel(level) },
+        onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
+        onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
+        onSetShowOnlyUnreadFeeds = { showUnread -> viewModel.setShowOnlyUnreadFeeds(showUnread) },
+        onBack = onClose
+    )
+}
+
+@Composable
+private fun BoundEntryReaderPane(
+    entry: net.veskuh.lyhty.data.local.entity.EntryEntity,
+    viewModel: MinifluxMainViewModel,
+    uiState: net.veskuh.lyhty.ui.state.MinifluxUiState,
+    postureInfo: net.veskuh.lyhty.ui.components.PostureInfo,
+    onBack: () -> Unit
+) {
+    EntryReaderPane(
+        entry = entry,
+        postureInfo = postureInfo,
+        fontSizeScale = uiState.fontSizeScale,
+        readerTheme = uiState.readerTheme,
+        onFetchFullText = { id -> viewModel.fetchOriginalContent(id) },
+        onMarkRead = { id -> viewModel.markAsRead(id) },
+        onMarkUnread = { id -> viewModel.markAsUnread(id) },
+        onMarkAllRead = { viewModel.markAllAsRead() },
+        onNextEntry = { viewModel.selectNextEntry() },
+        onPreviousEntry = { viewModel.selectPreviousEntry() },
+        onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },
+        onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
+        onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
+        onBack = onBack
+    )
 }
