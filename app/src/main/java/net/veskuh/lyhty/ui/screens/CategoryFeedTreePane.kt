@@ -102,7 +102,7 @@ fun CategoryFeedTreePane(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = Color.Black
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier
