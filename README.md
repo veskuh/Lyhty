@@ -1,97 +1,126 @@
-# 🕯️ Lyhty (Miniflux RSS Reader for Android)
+# Lyhty
 
-**Lyhty** (Finnish for *Lantern*) is a modern, privacy-focused Android RSS reader app specifically designed and optimized for foldable smartphones (such as the Honor Magic V3, Samsung Galaxy Z Fold series, Google Pixel Fold, and OnePlus Open), tablets, and standard phones.
+Miniflux RSS reader for Android. Lyhty is Finnish for "lantern".
 
-Built with **Jetpack Compose** and **Material 3 Adaptive**, Lyhty seamlessly syncs with your self-hosted **Miniflux v1 API** server with full offline-first capabilities.
+An Android client for self-hosted [Miniflux](https://miniflux.app/) servers, targeting foldables (Honor Magic V5, Samsung Galaxy Z Fold, Pixel Fold), tablets, and phones.
 
----
-
-## ✨ Features
-
-- **📱 Foldable & Adaptive Multi-Pane UI**:
-  - **Dual-Pane / Multi-Pane**: Hierarchical Category & Feed Tree + Article List + Reader Pane on unfolded foldable displays and tablets.
-  - **Single-Pane Navigation**: Smooth list-detail transitions with predictive back-gesture handling on cover displays and phone screens.
-  - **Foldable Posture Awareness**: Dynamic layout adaptation for **Tabletop (Flex Control Desk)**, **Book mode**, and **Flat canvas** postures.
-- **⭐ Starred / Bookmarks ("Save for Later")**:
-  - Star or unstar articles directly from the article reader overflow menu with tactile haptic feedback.
-  - Dedicated **"Starred" filter chip** in the feed list for fast access to bookmarked stories.
-  - Bidirectional offline synchronization for starred and unstarred actions.
-- **✅ Category & Feed-Level Mark-as-Read**:
-  - Long-press context menus on any category or feed card to mark all child articles as read in a single batch.
-  - Global "Mark all as read" shortcut directly from the "All Unread Feeds" card.
-- **👆 Intuitive Gestures & Reading Flow**:
-  - **Feed List Swipe Gestures**: Swipe left to immediately open the next unread article; swipe right to navigate back to the feed tree.
-  - **Reader Swiping & Quick-Jump Pill**: Swipe horizontally across articles, and automatically advance to the next unread feed following the visual sidebar hierarchy.
-- **📖 Rich Article Rendering**:
-  - Modular native rendering engine with `HtmlParserUtil` parsing headings, custom blockquotes, bullet lists, and SVG/raster images via Coil.
-  - Reader typography scaling and customizable reader themes (**OLED Black**, **Warm Sepia**, **Light**).
-- **⚡ Offline-First Architecture & Resilient Sync**:
-  - Instant offline access powered by Room SQLite Database.
-  - Network state detection (`NetworkMonitor`) with offline action batching and automatic synchronization upon reconnection.
-- **🔒 Secure Credential Management**:
-  - Encrypted token storage powered by `EncryptedSharedPreferences` with Keystore fallback and sanitized logging.
-  - Automatic URL normalization (handles trailing `/v1`, extra slashes, and protocol prefixes).
-  - Multi-header authentication fallback (`X-Auth-Token`, `X-Miniflux-API-Key`, `Authorization: Bearer`, and `Basic Auth`).
+Built with Jetpack Compose and Material 3 Adaptive. Syncs with the Miniflux v1 API. Offline-first.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## Features
 
-- **Language**: Kotlin 2.1.0 (JVM 21)
-- **UI Framework**: Jetpack Compose & Material 3 Adaptive Layout (`ListDetailPaneScaffold`)
-- **Dependency Injection**: Dagger Hilt
-- **Networking**: Retrofit 2 + OkHttp 4 + Kotlinx Serialization (with dynamic host resolution and transient retry interceptors)
-- **Database & Storage**: Room Database + SQLite FTS + EncryptedSharedPreferences (AndroidX Security Crypto)
-- **Image Loading**: Coil 2 with SVG decoder
-- **Concurrency**: Kotlin Coroutines, `StateFlow`, and `SharedFlow`
-- **Testing & Coverage**: JUnit 4, MockK, Robolectric, Turbine, and Kover (122 unit and scenario tests passing)
+- **Foldable and adaptive layout**
+  - Dual-pane layout on unfolded displays and tablets: category/feed tree + article list or reader.
+  - Single-pane list-detail navigation on cover displays and phones, with back-gesture handling.
+  - Folding posture awareness: tabletop (flex control desk), book, and flat modes.
+- **Star / bookmark**
+  - Star and unstar articles from the reader menu.
+  - "Starred" filter in the article list.
+  - Starred state syncs offline (both directions).
+- **Mark as read at category and feed level**
+  - Long-press a category or feed to mark all of its articles read in one batch.
+  - "Mark all as read" shortcut on the "All Unread Feeds" card.
+- **Gestures**
+  - Article list: swipe left to open the next unread article, swipe right to go back.
+  - Reader: swipe between articles, quick-jump pill to the next unread feed.
+- **Article rendering**
+  - `HtmlParserUtil` parses headings, blockquotes, bullet lists, and images (SVG/raster via Coil).
+  - Reader typography scaling and themes (OLED black, sepia, light).
+- **Offline-first sync**
+  - Local storage in Room.
+  - `NetworkMonitor` detects connectivity; pending actions sync on reconnection.
+- **Credentials**
+  - API key stored in `EncryptedSharedPreferences`.
+  - URL normalization (trailing `/v1`, extra slashes, protocol prefixes).
+  - Multi-header auth fallback (`X-Auth-Token`, `X-Miniflux-API-Key`, `Authorization`).
 
 ---
 
-## 🚀 Getting Started
+## Tech stack
+
+- **Language**: Kotlin 2.1.0
+- **UI**: Jetpack Compose, Material 3 Adaptive (`ListDetailPaneScaffold`)
+- **DI**: Dagger Hilt
+- **Networking**: Retrofit 2, OkHttp 4, kotlinx.serialization (dynamic host and retry interceptors)
+- **Storage**: Room + SQLite FTS, EncryptedSharedPreferences (AndroidX Security Crypto)
+- **Images**: Coil 2 with SVG decoder
+- **Concurrency**: Kotlin coroutines, StateFlow
+- **Tests**: JUnit 4, MockK, Robolectric, Turbine, Kover (122 unit and scenario tests)
+
+---
+
+## Project layout
+
+```
+data/
+  local/      Room database, entities, DAOs, migrations
+  network/    Retrofit MinifluxApiService, DTOs, OkHttp interceptors
+  repository/ MinifluxRepository(Impl), MinifluxConfigRepository(Impl)
+di/           Hilt modules
+ui/
+  screens/    LyhtyAdaptiveApp, CategoryFeedTreePane, EntryListPane, EntryReaderPane,
+              SettingsPane, ReaderComponents, MinifluxActionRow
+  viewmodel/  MinifluxMainViewModel
+  state/      MinifluxUiState, ReaderTheme
+  theme/      LyhtyTheme + color schemes
+util/         NetworkMonitor, LyhtyLogger, LyhtyErrorClassifier, DateFormatter, HtmlParserUtil
+```
+
+See `AGENTS.md` for key flows, conventions, and gotchas.
+
+---
+
+## Getting started
 
 ### Prerequisites
+
 - Android Studio Ladybug (2024.2.1+) or command-line SDK tools.
-- JDK 21+ (or JDK 17+).
-- A running [Miniflux](https://miniflux.app/) instance (v2.x with API enabled).
+- JDK 21 (the build and `./test.sh` are pinned to OpenJDK 21).
+- A running Miniflux instance (v2.x with API enabled).
 
-### Building & Running
+### Building and running
 
-1. **Clone the Repository**:
+1. Clone the repository:
+
    ```bash
    git clone https://github.com/veskuh/Lyhty.git
    cd Lyhty
    ```
 
-2. **Run Test Suite & Code Coverage**:
+2. Run tests and coverage:
+
    ```bash
    ./test.sh
    ```
 
-3. **Build Debug APK**:
+3. Build the debug APK:
+
    ```bash
    ./gradlew assembleDebug
    ```
-   The APK will be generated at `app/build/outputs/apk/debug/app-debug.apk` (or `apk/Lyhty-debug.apk`).
 
-4. **Install onto Connected Device via ADB**:
+   Output: `app/build/outputs/apk/debug/app-debug.apk`.
+
+4. Install on a connected device:
+
    ```bash
    adb install -r apk/Lyhty-debug.apk
    ```
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-Launch Lyhty on your device and navigate to **[ ⚙️ Settings ]**:
+Open Settings in the app:
 
-1. **Server URL**: Enter your Miniflux server URL (e.g. `https://miniflux.example.com`).
-2. **API Key / Token**: Enter your Miniflux API Key (generated under *Miniflux Web UI -> Settings -> API Keys*).
-3. **Log Level**: Select `DEBUG`, `INFO`, `WARN`, or `ERROR` for diagnostic logging.
-4. **Reading Preferences**: Adjust font size scaling (85% to 130%), color theme, and toggle *Hide feeds with no unread items*.
+1. **Server URL**: your Miniflux server URL, e.g. `https://miniflux.example.com`.
+2. **API key**: generated in the Miniflux web UI under Settings > API Keys.
+3. **Log level**: `DEBUG`, `INFO`, `WARN`, or `ERROR`.
+4. **Reading preferences**: font size scale, theme, and "hide feeds with no unread items".
 
 ---
 
-## 📄 License
+## License
 
-Copyright © 2026. All rights reserved.
+[BSD 3-Clause](LICENSE)
