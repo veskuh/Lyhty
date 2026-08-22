@@ -62,6 +62,29 @@ interface EntryDao {
     @Query("UPDATE entries SET status = :status, isSyncPending = 1 WHERE id = :entryId")
     suspend fun updateEntryStatus(entryId: Long, status: String)
 
+    @Query("UPDATE entries SET status = 'read', isSyncPending = 1 WHERE feedId = :feedId AND status = 'unread'")
+    suspend fun markFeedEntriesAsRead(feedId: Long)
+
+    @Query("""
+        UPDATE entries SET status = 'read', isSyncPending = 1 
+        WHERE (categoryId = :categoryId OR feedId IN (SELECT id FROM feeds WHERE categoryId = :categoryId)) 
+          AND status = 'unread'
+    """)
+    suspend fun markCategoryEntriesAsRead(categoryId: Long)
+
+    @Query("UPDATE entries SET status = 'read', isSyncPending = 1 WHERE status = 'unread'")
+    suspend fun markAllEntriesAsRead()
+
+    @Query("UPDATE entries SET isSyncPending = 0 WHERE feedId = :feedId AND status = 'read'")
+    suspend fun clearPendingSyncFlagForFeed(feedId: Long)
+
+    @Query("""
+        UPDATE entries SET isSyncPending = 0 
+        WHERE (categoryId = :categoryId OR feedId IN (SELECT id FROM feeds WHERE categoryId = :categoryId)) 
+          AND status = 'read'
+    """)
+    suspend fun clearPendingSyncFlagForCategory(categoryId: Long)
+
     @Query("UPDATE entries SET starred = :starred, isSyncPending = 1 WHERE id = :entryId")
     suspend fun updateEntryStarred(entryId: Long, starred: Boolean)
 

@@ -364,11 +364,24 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun markAllAsRead() {
         viewModelScope.launch {
-            val currentUnread = uiState.value.entries.filter { it.status == "unread" }
-            val ids = currentUnread.map { it.id }
-            if (ids.isNotEmpty()) {
-                repository.markEntriesAsRead(ids)
+            val state = uiState.value
+            when {
+                state.selectedFeed != null -> repository.markFeedAsRead(state.selectedFeed.id)
+                state.selectedCategory != null -> repository.markCategoryAsRead(state.selectedCategory.id)
+                else -> repository.markAllAsRead()
             }
+        }
+    }
+
+    fun markFeedAsRead(feedId: Long) {
+        viewModelScope.launch {
+            repository.markFeedAsRead(feedId)
+        }
+    }
+
+    fun markCategoryAsRead(categoryId: Long) {
+        viewModelScope.launch {
+            repository.markCategoryAsRead(categoryId)
         }
     }
 

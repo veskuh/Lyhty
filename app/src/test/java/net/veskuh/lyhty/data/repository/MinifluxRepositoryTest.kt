@@ -149,4 +149,20 @@ class MinifluxRepositoryTest {
         val emptyPendingAfterUnstar = database.entryDao().getPendingSyncEntries()
         assertTrue(emptyPendingAfterUnstar.isEmpty())
     }
+
+    @Test
+    fun `markFeedAsRead and markCategoryAsRead update unread entries to read`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries(status = "unread")
+
+        // Mark feed 10 as read
+        repository.markFeedAsRead(10L)
+        val feedEntries = repository.getEntries(feedId = 10L).first()
+        assertTrue(feedEntries.all { it.status == "read" })
+
+        // Mark category 1 as read
+        repository.markCategoryAsRead(1L)
+        val catEntries = repository.getEntries(categoryId = 1L).first()
+        assertTrue(catEntries.all { it.status == "read" })
+    }
 }

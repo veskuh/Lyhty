@@ -107,6 +107,24 @@ class FakeMinifluxRepository : MinifluxRepository {
         }
     }
 
+    override suspend fun markFeedAsRead(feedId: Long) {
+        entriesState.value = entriesState.value.map {
+            if (it.feedId == feedId) it.copy(status = "read") else it
+        }
+    }
+
+    override suspend fun markCategoryAsRead(categoryId: Long) {
+        entriesState.value = entriesState.value.map {
+            if (it.categoryId == categoryId) it.copy(status = "read") else it
+        }
+    }
+
+    override suspend fun markAllAsRead() {
+        entriesState.value = entriesState.value.map {
+            it.copy(status = "read")
+        }
+    }
+
     override suspend fun toggleBookmark(entryId: Long) {
         entriesState.value = entriesState.value.map {
             if (it.id == entryId) it.copy(starred = !it.starred) else it

@@ -150,6 +150,45 @@ class MinifluxRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun markFeedAsRead(feedId: Long) {
+        LyhtyLogger.info("Repository", "Marking all unread entries in feed $feedId as READ...")
+        database.entryDao().markFeedEntriesAsRead(feedId)
+        try {
+            apiService.markFeedAsRead(feedId)
+            database.entryDao().clearPendingSyncFlagForFeed(feedId)
+            LyhtyLogger.debug("Repository", "Server successfully confirmed feed $feedId marked as READ.")
+        } catch (e: Exception) {
+            LyhtyLogger.warn("Repository", "Server mark feed $feedId as read failed. Retaining isSyncPending flag for offline batch flush.", e)
+        }
+    }
+
+    override suspend fun markCategoryAsRead(categoryId: Long) {
+        LyhtyLogger.info("Repository", "Marking all unread entries in category $categoryId as READ...")
+        database.entryDao().markCategoryEntriesAsRead(categoryId)
+        try {
+            apiService.markCategoryAsRead(categoryId)
+            database.entryDao().clearPendingSyncFlagForCategory(categoryId)
+            LyhtyLogger.debug("Repository", "Server successfully confirmed category $categoryId marked as READ.")
+        } catch (e: Exception) {
+            LyhtyLogger.warn("Repository", "Server mark category $categoryId as read failed. Retaining isSyncPending flag for offline batch flush.", e)
+        }
+    }
+
+    override suspend fun markAllAsRead() {
+        LyhtyLogger.info("Repository", "Marking all unread entries as READ...")
+        database.entryDao().markAllEntriesAsRead()
+        try {
+            val unreadPending = database.entryDao().getPendingSyncEntries().filter { it.status == "read" }.map { it.id }
+            if (unreadPending.isNotEmpty()) {
+                apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds = unreadPending, status = "read"))
+                database.entryDao().clearPendingSyncFlag(unreadPending)
+            }
+            LyhtyLogger.debug("Repository", "Successfully marked all unread entries as READ.")
+        } catch (e: Exception) {
+            LyhtyLogger.warn("Repository", "Server bulk mark all as read failed. Retaining isSyncPending flag for offline batch flush.", e)
+        }
+    }
+
     override suspend fun toggleBookmark(entryId: Long) {
         LyhtyLogger.info("Repository", "Toggling bookmark for entry $entryId...")
         database.entryDao().toggleEntryStarred(entryId)

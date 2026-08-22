@@ -51,6 +51,9 @@ interface MinifluxApiService {
     @PUT("v1/feeds/{feed_id}/refresh")
     suspend fun refreshFeed(@Path("feed_id") feedId: Long)
 
+    @PUT("v1/feeds/{feed_id}/mark-all-as-read")
+    suspend fun markFeedAsRead(@Path("feed_id") feedId: Long)
+
     @PUT("v1/feeds/refresh")
     suspend fun refreshAllFeeds()
 

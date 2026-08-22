@@ -238,6 +238,9 @@ fun LyhtyAdaptiveApp(
                                         viewModel.selectFeed(feed)
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
+                                    onMarkCategoryAsRead = { categoryId -> viewModel.markCategoryAsRead(categoryId) },
+                                    onMarkFeedAsRead = { feedId -> viewModel.markFeedAsRead(feedId) },
+                                    onMarkAllAsRead = { viewModel.markAllAsRead() },
                                     onSync = { viewModel.refreshAll() },
                                     onOpenSettings = { isSettingsOpen = true }
                                 )

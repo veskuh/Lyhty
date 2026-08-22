@@ -7,6 +7,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.FeedEntity
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.performTouchInput
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -149,5 +152,40 @@ class CategoryFeedTreePaneTest {
 
         composeTestRule.onNodeWithText("Tech").assertIsDisplayed()
         composeTestRule.onNodeWithText("TechCrunch").assertIsDisplayed()
+    }
+
+    @Test
+    fun categoryFeedTreePaneLongPressShowsMarkAsReadMenu() {
+        var markFeedCalled: Long? = null
+        var markCatCalled: Long? = null
+
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(CategoryEntity(1, "Tech")),
+                feeds = listOf(
+                    FeedEntity(10, "TechCrunch", categoryId = 1)
+                ),
+                selectedCategory = null,
+                selectedFeed = null,
+                unreadCountsByFeed = mapOf(10L to 3),
+                unreadCountsByCategory = mapOf(1L to 3),
+                showOnlyUnreadFeeds = true,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onMarkCategoryAsRead = { markCatCalled = it },
+                onMarkFeedAsRead = { markFeedCalled = it },
+                onSync = {}
+            )
+        }
+
+        // Long press category
+        composeTestRule.onNodeWithText("Tech").performTouchInput { longClick() }
+        composeTestRule.onNodeWithText("Mark category as read").performClick()
+        assertEquals(1L, markCatCalled)
+
+        // Long press feed
+        composeTestRule.onNodeWithText("TechCrunch").performTouchInput { longClick() }
+        composeTestRule.onNodeWithText("Mark feed as read").performClick()
+        assertEquals(10L, markFeedCalled)
     }
 }
