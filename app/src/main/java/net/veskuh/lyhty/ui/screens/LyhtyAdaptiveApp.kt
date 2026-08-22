@@ -160,6 +160,7 @@ fun LyhtyAdaptiveApp(
                         unreadCountsByCategory = uiState.unreadCountsByCategory,
                         unreadCountsByFeed = uiState.unreadCountsByFeed,
                         showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
+                        readerTheme = uiState.readerTheme,
                         onSelectCategory = { category ->
                             isSettingsOpen = false
                             viewModel.selectCategory(category)
@@ -228,6 +229,7 @@ fun LyhtyAdaptiveApp(
                                     unreadCountsByCategory = uiState.unreadCountsByCategory,
                                     unreadCountsByFeed = uiState.unreadCountsByFeed,
                                     showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
+                                    readerTheme = uiState.readerTheme,
                                     onSelectCategory = { category ->
                                         viewModel.selectCategory(category)
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)

@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.material.icons.filled.FolderOpen
 
 import net.veskuh.lyhty.data.local.entity.EntryEntity
+import net.veskuh.lyhty.ui.state.ReaderTheme
 
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Color
@@ -62,6 +63,7 @@ fun CategoryFeedTreePane(
     unreadCountsByCategory: Map<Long, Int> = emptyMap(),
     unreadCountsByFeed: Map<Long, Int> = emptyMap(),
     showOnlyUnreadFeeds: Boolean = true,
+    readerTheme: ReaderTheme = ReaderTheme.OLED_DARK,
     onSelectCategory: (CategoryEntity?) -> Unit,
     onSelectFeed: (FeedEntity?) -> Unit,
     onSync: () -> Unit,
@@ -100,6 +102,12 @@ fun CategoryFeedTreePane(
         visibleFeeds.filter { feed -> categories.none { cat -> cat.id == feed.categoryId } }
     }
 
+    val headerDrawable = when (readerTheme) {
+        ReaderTheme.LIGHT -> net.veskuh.lyhty.R.drawable.header_white
+        ReaderTheme.SEPIA -> net.veskuh.lyhty.R.drawable.header_cream
+        ReaderTheme.OLED_DARK -> net.veskuh.lyhty.R.drawable.header
+    }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -109,19 +117,20 @@ fun CategoryFeedTreePane(
                 .fillMaxSize()
                 .padding(12.dp)
         ) {
-            // Header Image (header.png)
+            // Header Image (Theme-aware and Centered)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Image(
-                    painter = painterResource(net.veskuh.lyhty.R.drawable.header),
+                    painter = painterResource(headerDrawable),
                     contentDescription = "Lyhty",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
                     contentScale = ContentScale.Fit,
-                    alignment = Alignment.CenterStart
+                    alignment = Alignment.Center
                 )
             }
 
