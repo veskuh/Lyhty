@@ -47,7 +47,13 @@ object NetworkModule {
 
         return OkHttpClient.Builder()
             .cache(cache)
-            .connectionSpecs(listOf(okhttp3.ConnectionSpec.RESTRICTED_TLS, okhttp3.ConnectionSpec.MODERN_TLS))
+            .connectionSpecs(
+                listOf(
+                    okhttp3.ConnectionSpec.RESTRICTED_TLS,
+                    okhttp3.ConnectionSpec.MODERN_TLS,
+                    okhttp3.ConnectionSpec.CLEARTEXT
+                )
+            )
             .addInterceptor(dynamicHostInterceptor)
             .addInterceptor(authInterceptor)
             .addInterceptor(net.veskuh.lyhty.data.remote.TransientNetworkInterceptor(maxRetries = 3, initialDelayMs = 200L))

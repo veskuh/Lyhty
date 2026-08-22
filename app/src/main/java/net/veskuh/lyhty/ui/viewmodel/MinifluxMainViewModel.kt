@@ -37,12 +37,23 @@ class MinifluxMainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            var wasOffline = false
             isOnline.collect { online ->
                 if (online) {
-                    net.veskuh.lyhty.util.LyhtyLogger.info("ViewModel", "Network restored (isOnline=true). Flushing pending syncs...")
-                    try {
-                        repository.flushPendingSyncs()
-                    } catch (_: Exception) {}
+                    net.veskuh.lyhty.util.LyhtyLogger.info("ViewModel", "Network active/restored (isOnline=true).")
+                    if (wasOffline) {
+                        _currentError.value = null
+                        _errorMessage.value = null
+                        refreshAll()
+                    } else {
+                        try {
+                            repository.flushPendingSyncs()
+                        } catch (_: Exception) {}
+                    }
+                    wasOffline = false
+                } else {
+                    wasOffline = true
+                    net.veskuh.lyhty.util.LyhtyLogger.warn("ViewModel", "Network lost (isOnline=false).")
                 }
             }
         }
@@ -367,6 +378,7 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun clearError() {
         _errorMessage.value = null
+        _currentError.value = null
     }
 
     fun setReaderTheme(theme: ReaderTheme) {
