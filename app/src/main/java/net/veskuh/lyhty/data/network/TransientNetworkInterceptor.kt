@@ -1,9 +1,8 @@
-package net.veskuh.lyhty.data.remote
+package net.veskuh.lyhty.data.network
 
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
-
 import net.veskuh.lyhty.util.LyhtyLogger
 
 class TransientNetworkInterceptor(

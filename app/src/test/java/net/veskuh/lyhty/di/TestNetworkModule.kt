@@ -1,7 +1,7 @@
 package net.veskuh.lyhty.di
 
 import net.veskuh.lyhty.data.network.MinifluxApiService
-import net.veskuh.lyhty.data.remote.MinifluxAuthInterceptor
+import net.veskuh.lyhty.data.network.MinifluxAuthInterceptor
 import net.veskuh.lyhty.data.repository.FakeMinifluxConfigRepository
 import net.veskuh.lyhty.data.repository.MinifluxConfigRepository
 import net.veskuh.lyhty.testdouble.SimulatedMinifluxServer

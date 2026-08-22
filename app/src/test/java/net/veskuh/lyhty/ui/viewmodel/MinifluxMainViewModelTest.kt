@@ -227,4 +227,61 @@ class MinifluxMainViewModelTest {
         coVerify { repository.markCategoryAsRead(1) }
         coVerify { repository.markAllAsRead() }
     }
+
+    @Test
+    fun `advanceToNextUnreadFeed selects next unread feed when available`() = runTest {
+        val feedsWithUnread = listOf(
+            FeedEntity(10, "TechCrunch", categoryId = 1),
+            FeedEntity(20, "Ars Technica", categoryId = 1)
+        )
+        every { repository.getFeeds() } returns flowOf(feedsWithUnread)
+        every { repository.getUnreadCountsByFeed() } returns flowOf(listOf(
+            FeedUnreadCount(10, 0),
+            FeedUnreadCount(20, 3)
+        ))
+
+        val viewModel = MinifluxMainViewModel(repository)
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            awaitItem() // initial
+            awaitItem() // loaded
+
+            viewModel.selectFeed(feedsWithUnread[0])
+            testDispatcher.scheduler.advanceUntilIdle()
+            awaitItem() // selection updated
+
+            val nextTitle = viewModel.advanceToNextUnreadFeed()
+            assertEquals("Ars Technica", nextTitle)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setStatusFilter and setShowOnlyUnreadFeeds update state`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+
+        viewModel.setStatusFilter("starred")
+        viewModel.setShowOnlyUnreadFeeds(false)
+
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+
+            assertEquals("starred", state.statusFilter)
+            assertEquals(false, state.showOnlyUnreadFeeds)
+        }
+    }
+
+    @Test
+    fun `refreshAll handles repository errors gracefully`() = runTest {
+        coEvery { repository.syncCategoriesAndFeeds() } throws RuntimeException("Network timeout")
+        val viewModel = MinifluxMainViewModel(repository)
+
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertNotNull(state.errorMessage)
+            assertNotNull(state.currentError)
+        }
+    }
 }

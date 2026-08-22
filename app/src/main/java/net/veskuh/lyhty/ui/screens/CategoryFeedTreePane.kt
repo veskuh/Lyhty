@@ -1,11 +1,12 @@
 package net.veskuh.lyhty.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
@@ -27,41 +29,33 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
-import net.veskuh.lyhty.data.local.entity.FeedEntity
-
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.text.font.FontWeight
-
-import androidx.compose.runtime.remember
-
-import androidx.compose.material.icons.filled.FolderOpen
-
 import net.veskuh.lyhty.data.local.entity.EntryEntity
+import net.veskuh.lyhty.data.local.entity.FeedEntity
 import net.veskuh.lyhty.ui.state.ReaderTheme
 
-import androidx.compose.foundation.Image
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CategoryFeedTreePane(
     categories: List<CategoryEntity>,
@@ -190,7 +184,6 @@ fun CategoryFeedTreePane(
                         }
                     }
                 } else {
-                    // Categories & Feeds Tree List
                     val totalUnreadCount = unreadCountsByFeed.values.sum()
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -199,73 +192,30 @@ fun CategoryFeedTreePane(
                         // "All Unread" Entry Shortcut
                         item {
                             var showAllMenu by remember { mutableStateOf(false) }
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = {
-                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                onSelectCategory(null)
-                                                onSelectFeed(null)
-                                            },
-                                            onLongClick = {
-                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                showAllMenu = true
-                                            }
-                                        ),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (selectedCategory == null && selectedFeed == null) {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.surfaceContainerHigh
-                                        }
-                                    )
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.weight(1f),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(Icons.Default.RssFeed, contentDescription = null)
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(
-                                                text = "All Unread Feeds",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        if (totalUnreadCount > 0) {
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Badge {
-                                                Text(text = "$totalUnreadCount")
-                                            }
-                                        }
-                                    }
-                                }
-
-                                DropdownMenu(
-                                    expanded = showAllMenu,
-                                    onDismissRequest = { showAllMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Mark all as read") },
-                                        leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
-                                        onClick = {
-                                            showAllMenu = false
-                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            onMarkAllAsRead?.invoke()
-                                        }
-                                    )
-                                }
-                            }
+                            FeedTreeCard(
+                                title = "All Unread Feeds",
+                                icon = Icons.Default.RssFeed,
+                                unreadCount = totalUnreadCount,
+                                isSelected = selectedCategory == null && selectedFeed == null,
+                                containerColor = if (selectedCategory == null && selectedFeed == null) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                },
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSelectCategory(null)
+                                    onSelectFeed(null)
+                                },
+                                onLongClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showAllMenu = true
+                                },
+                                menuExpanded = showAllMenu,
+                                onDismissMenu = { showAllMenu = false },
+                                menuActionText = "Mark all as read",
+                                onMenuAction = { onMarkAllAsRead?.invoke() }
+                            )
                         }
 
                         // Categories & Nested Feeds Tree
@@ -278,73 +228,29 @@ fun CategoryFeedTreePane(
                             var showCatMenu by remember { mutableStateOf(false) }
 
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                // Category Header Card
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {
-                                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    onSelectCategory(category)
-                                                },
-                                                onLongClick = {
-                                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    showCatMenu = true
-                                                }
-                                            ),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (isCatSelected) {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceContainerHigh
-                                            }
-                                        )
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.weight(1f),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(Icons.Default.Folder, contentDescription = null)
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = category.title,
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            if (catUnreadCount > 0) {
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Badge {
-                                                    Text(text = "$catUnreadCount")
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    DropdownMenu(
-                                        expanded = showCatMenu,
-                                        onDismissRequest = { showCatMenu = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Mark category as read") },
-                                            leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
-                                            onClick = {
-                                                showCatMenu = false
-                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                onMarkCategoryAsRead?.invoke(category.id)
-                                            }
-                                        )
-                                    }
-                                }
+                                FeedTreeCard(
+                                    title = category.title,
+                                    icon = Icons.Default.Folder,
+                                    unreadCount = catUnreadCount,
+                                    isSelected = isCatSelected,
+                                    containerColor = if (isCatSelected) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHigh
+                                    },
+                                    onClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onSelectCategory(category)
+                                    },
+                                    onLongClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        showCatMenu = true
+                                    },
+                                    menuExpanded = showCatMenu,
+                                    onDismissMenu = { showCatMenu = false },
+                                    menuActionText = "Mark category as read",
+                                    onMenuAction = { onMarkCategoryAsRead?.invoke(category.id) }
+                                )
 
                                 // Child Feeds List under Category
                                 childFeeds.forEach { feed ->
@@ -352,76 +258,34 @@ fun CategoryFeedTreePane(
                                     val feedUnreadCount = unreadCountsByFeed[feed.id] ?: 0
                                     var showFeedMenu by remember { mutableStateOf(false) }
 
-                                    Box(
+                                    FeedTreeCard(
+                                        title = feed.title,
+                                        icon = Icons.Default.RssFeed,
+                                        unreadCount = feedUnreadCount,
+                                        isSelected = isFeedSelected,
+                                        containerColor = if (isFeedSelected) {
+                                            MaterialTheme.colorScheme.secondaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceContainerLow
+                                        },
+                                        textStyle = MaterialTheme.typography.bodyMedium,
+                                        padding = PaddingValues(10.dp),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 24.dp, top = 4.dp)
-                                    ) {
-                                        Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .combinedClickable(
-                                                    onClick = {
-                                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        onSelectFeed(feed)
-                                                    },
-                                                    onLongClick = {
-                                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        showFeedMenu = true
-                                                    }
-                                                ),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = if (isFeedSelected) {
-                                                    MaterialTheme.colorScheme.secondaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.surfaceContainerLow
-                                                }
-                                            )
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(10.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.weight(1f),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Icon(Icons.Default.RssFeed, contentDescription = null)
-                                                    Spacer(modifier = Modifier.width(10.dp))
-                                                    Text(
-                                                        text = feed.title,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
-                                                if (feedUnreadCount > 0) {
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Badge {
-                                                        Text(text = "$feedUnreadCount")
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        DropdownMenu(
-                                            expanded = showFeedMenu,
-                                            onDismissRequest = { showFeedMenu = false }
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { Text("Mark feed as read") },
-                                                leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
-                                                onClick = {
-                                                    showFeedMenu = false
-                                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    onMarkFeedAsRead?.invoke(feed.id)
-                                                }
-                                            )
-                                        }
-                                    }
+                                            .padding(start = 24.dp, top = 4.dp),
+                                        onClick = {
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onSelectFeed(feed)
+                                        },
+                                        onLongClick = {
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            showFeedMenu = true
+                                        },
+                                        menuExpanded = showFeedMenu,
+                                        onDismissMenu = { showFeedMenu = false },
+                                        menuActionText = "Mark feed as read",
+                                        onMenuAction = { onMarkFeedAsRead?.invoke(feed.id) }
+                                    )
                                 }
                             }
                         }
@@ -431,46 +295,17 @@ fun CategoryFeedTreePane(
                             item {
                                 val uncategorizedUnreadCount = uncategorizedFeeds.sumOf { unreadCountsByFeed[it.id] ?: 0 }
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    // Uncategorized Header Card
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                onSelectCategory(null)
-                                                onSelectFeed(null)
-                                            },
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                        )
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.weight(1f),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(Icons.Default.FolderOpen, contentDescription = null)
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = "Uncategorized",
-                                                    style = MaterialTheme.typography.bodyLarge,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                            if (uncategorizedUnreadCount > 0) {
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Badge {
-                                                    Text(text = "$uncategorizedUnreadCount")
-                                                }
-                                            }
+                                    FeedTreeCard(
+                                        title = "Uncategorized",
+                                        icon = Icons.Default.FolderOpen,
+                                        unreadCount = uncategorizedUnreadCount,
+                                        isSelected = false,
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        onClick = {
+                                            onSelectCategory(null)
+                                            onSelectFeed(null)
                                         }
-                                    }
+                                    )
 
                                     // Child Feeds under Uncategorized
                                     uncategorizedFeeds.forEach { feed ->
@@ -478,76 +313,34 @@ fun CategoryFeedTreePane(
                                         val feedUnreadCount = unreadCountsByFeed[feed.id] ?: 0
                                         var showUncatFeedMenu by remember { mutableStateOf(false) }
 
-                                        Box(
+                                        FeedTreeCard(
+                                            title = feed.title,
+                                            icon = Icons.Default.RssFeed,
+                                            unreadCount = feedUnreadCount,
+                                            isSelected = isFeedSelected,
+                                            containerColor = if (isFeedSelected) {
+                                                MaterialTheme.colorScheme.secondaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceContainerLow
+                                            },
+                                            textStyle = MaterialTheme.typography.bodyMedium,
+                                            padding = PaddingValues(10.dp),
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(start = 24.dp, top = 4.dp)
-                                        ) {
-                                            Card(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .combinedClickable(
-                                                        onClick = {
-                                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            onSelectFeed(feed)
-                                                        },
-                                                        onLongClick = {
-                                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            showUncatFeedMenu = true
-                                                        }
-                                                    ),
-                                                colors = CardDefaults.cardColors(
-                                                    containerColor = if (isFeedSelected) {
-                                                        MaterialTheme.colorScheme.secondaryContainer
-                                                    } else {
-                                                        MaterialTheme.colorScheme.surfaceContainerLow
-                                                    }
-                                                )
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(10.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.weight(1f),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Icon(Icons.Default.RssFeed, contentDescription = null)
-                                                        Spacer(modifier = Modifier.width(10.dp))
-                                                        Text(
-                                                            text = feed.title,
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
-                                                        )
-                                                    }
-                                                    if (feedUnreadCount > 0) {
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Badge {
-                                                            Text(text = "$feedUnreadCount")
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            DropdownMenu(
-                                                expanded = showUncatFeedMenu,
-                                                onDismissRequest = { showUncatFeedMenu = false }
-                                            ) {
-                                                DropdownMenuItem(
-                                                    text = { Text("Mark feed as read") },
-                                                    leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
-                                                    onClick = {
-                                                        showUncatFeedMenu = false
-                                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        onMarkFeedAsRead?.invoke(feed.id)
-                                                    }
-                                                )
-                                            }
-                                        }
+                                                .padding(start = 24.dp, top = 4.dp),
+                                            onClick = {
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                onSelectFeed(feed)
+                                            },
+                                            onLongClick = {
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                showUncatFeedMenu = true
+                                            },
+                                            menuExpanded = showUncatFeedMenu,
+                                            onDismissMenu = { showUncatFeedMenu = false },
+                                            menuActionText = "Mark feed as read",
+                                            onMenuAction = { onMarkFeedAsRead?.invoke(feed.id) }
+                                        )
                                     }
                                 }
                             }
@@ -582,6 +375,84 @@ fun CategoryFeedTreePane(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FeedTreeCard(
+    title: String,
+    icon: ImageVector,
+    unreadCount: Int = 0,
+    isSelected: Boolean = false,
+    containerColor: Color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    modifier: Modifier = Modifier,
+    padding: PaddingValues = PaddingValues(12.dp),
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    menuExpanded: Boolean = false,
+    onDismissMenu: () -> Unit = {},
+    menuActionText: String? = null,
+    onMenuAction: (() -> Unit)? = null
+) {
+    val haptics = LocalHapticFeedback.current
+
+    Box(modifier = modifier) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+            colors = CardDefaults.cardColors(containerColor = containerColor)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(padding),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(icon, contentDescription = null)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = title,
+                        style = textStyle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (unreadCount > 0) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Badge {
+                        Text(text = "$unreadCount")
+                    }
+                }
+            }
+        }
+
+        if (menuActionText != null && onMenuAction != null) {
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = onDismissMenu
+            ) {
+                DropdownMenuItem(
+                    text = { Text(menuActionText) },
+                    leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
+                    onClick = {
+                        onDismissMenu()
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onMenuAction()
+                    }
+                )
             }
         }
     }

@@ -1,8 +1,10 @@
 package net.veskuh.lyhty.di
 
 import net.veskuh.lyhty.data.local.LyhtyDatabase
+import net.veskuh.lyhty.data.network.DynamicHostInterceptor
 import net.veskuh.lyhty.data.network.MinifluxApiService
-import net.veskuh.lyhty.data.remote.MinifluxAuthInterceptor
+import net.veskuh.lyhty.data.network.MinifluxAuthInterceptor
+import net.veskuh.lyhty.data.network.TransientNetworkInterceptor
 import net.veskuh.lyhty.data.repository.MinifluxRepository
 import net.veskuh.lyhty.data.repository.MinifluxRepositoryImpl
 import dagger.Module
@@ -32,16 +34,16 @@ object NetworkModule {
     @Singleton
     fun provideAuthInterceptor(
         configRepository: net.veskuh.lyhty.data.repository.MinifluxConfigRepository
-    ): net.veskuh.lyhty.data.remote.MinifluxAuthInterceptor {
-        return net.veskuh.lyhty.data.remote.MinifluxAuthInterceptor(configRepository)
+    ): MinifluxAuthInterceptor {
+        return MinifluxAuthInterceptor(configRepository)
     }
 
     @Provides
     @Singleton
     fun provideOkHttpClient(
         @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
-        authInterceptor: net.veskuh.lyhty.data.remote.MinifluxAuthInterceptor,
-        dynamicHostInterceptor: net.veskuh.lyhty.data.remote.DynamicHostInterceptor
+        authInterceptor: MinifluxAuthInterceptor,
+        dynamicHostInterceptor: DynamicHostInterceptor
     ): OkHttpClient {
         val cacheDir = java.io.File(context.cacheDir, "http_cache")
         val cache = okhttp3.Cache(cacheDir, 10 * 1024 * 1024L)
@@ -57,7 +59,7 @@ object NetworkModule {
             )
             .addInterceptor(dynamicHostInterceptor)
             .addInterceptor(authInterceptor)
-            .addInterceptor(net.veskuh.lyhty.data.remote.TransientNetworkInterceptor(maxRetries = 3, initialDelayMs = 200L))
+            .addInterceptor(TransientNetworkInterceptor(maxRetries = 3, initialDelayMs = 200L))
             .build()
     }
 

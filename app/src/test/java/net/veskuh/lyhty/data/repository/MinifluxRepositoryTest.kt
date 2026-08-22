@@ -165,4 +165,61 @@ class MinifluxRepositoryTest {
         val catEntries = repository.getEntries(categoryId = 1L).first()
         assertTrue(catEntries.all { it.status == "read" })
     }
+
+    @Test
+    fun `markEntryAsUnread marks entry as unread and handles offline sync`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries()
+
+        // 1. Online mark as unread
+        repository.markEntryAsUnread(101L)
+        val unreadEntry = repository.getEntryById(101L).first()
+        assertEquals("unread", unreadEntry?.status)
+
+        // 2. Offline mark as unread
+        simulatedServer.enqueueError(500, "Offline")
+        repository.markEntryAsUnread(102L)
+        val pending = database.entryDao().getPendingSyncEntries()
+        assertEquals(1, pending.size)
+        assertEquals("unread", pending[0].status)
+
+        repository.flushPendingSyncs()
+        assertTrue(database.entryDao().getPendingSyncEntries().isEmpty())
+    }
+
+    @Test
+    fun `markEntriesAsRead and markAllAsRead update database`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries(status = "unread")
+
+        // Empty list does nothing
+        repository.markEntriesAsRead(emptyList())
+
+        // Bulk mark as read
+        repository.markEntriesAsRead(listOf(101L))
+        assertEquals("read", repository.getEntryById(101L).first()?.status)
+
+        // Mark all as read
+        repository.markAllAsRead()
+        val allEntries = repository.getEntries().first()
+        assertTrue(allEntries.all { it.status == "read" })
+    }
+
+    @Test
+    fun `clearLocalDatabase clears all tables in Room`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries()
+
+        repository.clearLocalDatabase()
+
+        assertTrue(repository.getCategories().first().isEmpty())
+        assertTrue(repository.getFeeds().first().isEmpty())
+        assertTrue(repository.getEntries().first().isEmpty())
+    }
+
+    @Test(expected = Exception::class)
+    fun `fetchServerFullText propagates exception on server failure`() = runTest {
+        simulatedServer.enqueueError(500, "Server Error")
+        repository.fetchServerFullText(999L)
+    }
 }

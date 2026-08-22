@@ -1,4 +1,4 @@
-package net.veskuh.lyhty.data.remote
+package net.veskuh.lyhty.data.network
 
 import okhttp3.OkHttpClient
 import okhttp3.Request

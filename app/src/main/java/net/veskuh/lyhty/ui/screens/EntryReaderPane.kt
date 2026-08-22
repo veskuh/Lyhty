@@ -2,126 +2,64 @@ package net.veskuh.lyhty.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.graphics.Typeface
-import android.text.Html
-import android.text.Spanned
-import android.text.style.AbsoluteSizeSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
-import android.text.style.StrikethroughSpan
-import android.text.style.StyleSpan
-import android.text.style.TypefaceSpan
-import android.text.style.URLSpan
-import android.text.style.UnderlineSpan
+import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.window.core.layout.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowWidthSizeClass
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.ui.components.DevicePosture
 import net.veskuh.lyhty.ui.components.PostureInfo
 import net.veskuh.lyhty.ui.state.ReaderTheme
-import net.veskuh.lyhty.util.DateFormatter
-import net.veskuh.lyhty.util.HtmlParserUtil
-import net.veskuh.lyhty.util.ReaderBlock
-
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-
-import android.widget.Toast
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.input.pointer.pointerInput
-
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ScrollState
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 
 @Composable
 fun EntryReaderPane(
@@ -175,7 +113,7 @@ fun EntryReaderPane(
 
         var totalDragX by remember { mutableFloatStateOf(0f) }
         var isAtEndSignaled by remember(entry.id) { mutableStateOf(false) }
-        var slideDirection by remember { androidx.compose.runtime.mutableIntStateOf(1) }
+        var slideDirection by remember { mutableIntStateOf(1) }
         val entryCache = remember { mutableStateMapOf<Long, EntryEntity>() }
         entryCache[entry.id] = entry
 
@@ -199,11 +137,7 @@ fun EntryReaderPane(
                         if (!moved) {
                             if (!isAtEndSignaled) {
                                 isAtEndSignaled = true
-                                Toast.makeText(
-                                    context,
-                                    "End of current list. Swipe again to jump to next unread feed.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(context, "Last article in current view", Toast.LENGTH_SHORT).show()
                             } else {
                                 val nextFeedTitle = onAdvanceToNextFeed?.invoke()
                                 if (nextFeedTitle != null) {
@@ -219,7 +153,7 @@ fun EntryReaderPane(
                         slideDirection = -1
                         val moved = onPreviousEntry?.invoke() ?: false
                         if (!moved) {
-                            Toast.makeText(context, "First article in current list", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "First article in current view", Toast.LENGTH_SHORT).show()
                         }
                     }
                 },
@@ -230,27 +164,92 @@ fun EntryReaderPane(
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Slender Reading Progress Indicator (2.dp)
-            if (rawProgress > 0f) {
-                LinearProgressIndicator(
-                    progress = { animatedProgress },
+            // Reading Progress Indicator
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .semantics { contentDescription = "Reading Progress" },
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            )
+
+            // Top Reader Quick-Bar (Font size & Theme toggles)
+            if (onSetTheme != null || onSetFontSizeScale != null) {
+                var isThemeMenuExpanded by remember { mutableStateOf(false) }
+                var isFontMenuExpanded by remember { mutableStateOf(false) }
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(2.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.Transparent
-                )
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (onSetFontSizeScale != null) {
+                        Box {
+                            IconButton(onClick = { isFontMenuExpanded = true }) {
+                                Icon(Icons.Default.FormatSize, contentDescription = "Font Size")
+                            }
+                            DropdownMenu(
+                                expanded = isFontMenuExpanded,
+                                onDismissRequest = { isFontMenuExpanded = false }
+                            ) {
+                                listOf(0.85f to "Small (85%)", 1.0f to "Default (100%)", 1.15f to "Large (115%)", 1.3f to "Extra Large (130%)").forEach { (scale, label) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = label,
+                                                fontWeight = if (kotlin.math.abs(fontSizeScale - scale) < 0.05f) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = {
+                                            isFontMenuExpanded = false
+                                            onSetFontSizeScale(scale)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (onSetTheme != null) {
+                        Box {
+                            IconButton(onClick = { isThemeMenuExpanded = true }) {
+                                Icon(Icons.Default.Palette, contentDescription = "Reader Theme")
+                            }
+                            DropdownMenu(
+                                expanded = isThemeMenuExpanded,
+                                onDismissRequest = { isThemeMenuExpanded = false }
+                            ) {
+                                listOf(ReaderTheme.OLED_DARK to "OLED Black", ReaderTheme.SEPIA to "Warm Sepia", ReaderTheme.LIGHT to "Light").forEach { (theme, label) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = label,
+                                                fontWeight = if (readerTheme == theme) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = {
+                                            isThemeMenuExpanded = false
+                                            onSetTheme(theme)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if (isFlexMode) {
-                // Tabletop Flex Mode split (Top: Content, Bottom: Miniflux Desk)
-                Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    // Top Half Display (Reader Content)
+                // Tabletop / Flex-Mode Split
+                Column(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .padding(bottom = postureInfo.hingeBoundsDp.dp)
                             .then(gestureModifier)
                     ) {
                         AnimatedContent(
@@ -265,7 +264,12 @@ fun EntryReaderPane(
                             label = "ReaderContentFlexTransition"
                         ) { targetId ->
                             val cachedEntry = entryCache[targetId] ?: entry
-                            ReaderContent(entry = cachedEntry, fontSizeScale = fontSizeScale, scrollState = scrollState)
+                            ReaderContent(
+                                entry = cachedEntry,
+                                fontSizeScale = fontSizeScale,
+                                scrollState = scrollState,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
                         }
 
                         ReaderQuickJumpPill(
@@ -284,16 +288,26 @@ fun EntryReaderPane(
                                         Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 16.dp, end = 16.dp)
                         )
                     }
 
-                    // Bottom Half Display (Miniflux Action Desk)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(postureInfo.hingeBoundsDp.coerceAtLeast(1f).dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                    )
+
                     Surface(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .navigationBarsPadding(),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column(
                             modifier = Modifier
@@ -371,7 +385,10 @@ fun EntryReaderPane(
                                         Toast.makeText(context, "No more unread articles", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 16.dp, end = 16.dp)
                         )
                     }
 
@@ -397,416 +414,6 @@ fun EntryReaderPane(
                         }
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun androidx.compose.foundation.layout.BoxScope.ReaderQuickJumpPill(
-    scrollState: ScrollState,
-    hasNextEntry: Boolean,
-    hasNextFeed: Boolean,
-    onJumpNext: () -> Unit
-) {
-    val isNearEnd = scrollState.maxValue > 0 && scrollState.value >= scrollState.maxValue - 200
-    androidx.compose.animation.AnimatedVisibility(
-        visible = scrollState.value > 120 && (hasNextEntry || hasNextFeed),
-        enter = fadeIn() + slideInVertically { it / 2 },
-        exit = fadeOut() + slideOutVertically { it / 2 },
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(bottom = 16.dp, end = 16.dp)
-    ) {
-        Surface(
-            onClick = onJumpNext,
-            shape = RoundedCornerShape(24.dp),
-            color = if (isNearEnd) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            shadowElevation = 6.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = if (isNearEnd) Icons.Default.DoneAll else Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = if (isNearEnd) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (isNearEnd) "Next Feed ➔" else "Next Article",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isNearEnd) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReaderContent(
-    entry: EntryEntity,
-    fontSizeScale: Float,
-    scrollState: ScrollState = rememberScrollState()
-) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val uriHandler = LocalUriHandler.current
-    val density = LocalDensity.current.density
-    val blocks = remember(entry.id, entry.content, primaryColor, fontSizeScale, density) {
-        HtmlParserUtil.parseHtmlToBlocks(entry.content, primaryColor, fontSizeScale, density)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 680.dp)
-        ) {
-            Text(
-                text = entry.feedTitle,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = entry.title,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = (24 * fontSizeScale).sp
-                ),
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            val formattedDate = remember(entry.publishedAt) {
-                DateFormatter.formatRelativeTime(entry.publishedAt)
-            }
-            val subtitleText = remember(formattedDate, entry.author) {
-                buildString {
-                    if (formattedDate.isNotBlank()) {
-                        append(formattedDate)
-                    }
-                    if (entry.author.isNotBlank()) {
-                        if (isNotEmpty()) append(" • ")
-                        append("by ${entry.author}")
-                    }
-                }
-            }
-            if (subtitleText.isNotBlank()) {
-                Text(
-                    text = subtitleText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-
-            if (blocks.isEmpty()) {
-                Text(
-                    text = "No content preview available.",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = (16 * fontSizeScale).sp,
-                        lineHeight = (26 * fontSizeScale).sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    blocks.forEach { block ->
-                        when (block) {
-                            is ReaderBlock.Text -> {
-                                ReaderTextBlock(
-                                    content = block.content,
-                                    fontSizeScale = fontSizeScale,
-                                    onOpenUrl = { url ->
-                                        try {
-                                            uriHandler.openUri(url)
-                                        } catch (_: Throwable) {}
-                                    }
-                                )
-                            }
-                            is ReaderBlock.Quote -> {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(IntrinsicSize.Min)
-                                        .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
-                                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
-                                        .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 12.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .width(4.dp)
-                                            .fillMaxHeight()
-                                            .clip(RoundedCornerShape(2.dp))
-                                            .background(MaterialTheme.colorScheme.primary)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    ReaderTextBlock(
-                                        content = block.content,
-                                        fontSizeScale = fontSizeScale,
-                                        onOpenUrl = { url ->
-                                            try {
-                                                uriHandler.openUri(url)
-                                            } catch (_: Throwable) {}
-                                        },
-                                        fontStyle = FontStyle.Italic,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                            is ReaderBlock.ListItem -> {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 16.dp),
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    Text(
-                                        text = "• ",
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontSize = (16 * fontSizeScale).sp,
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    ReaderTextBlock(
-                                        content = block.content,
-                                        fontSizeScale = fontSizeScale,
-                                        onOpenUrl = { url ->
-                                            try {
-                                                uriHandler.openUri(url)
-                                            } catch (_: Throwable) {}
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                            is ReaderBlock.Image -> {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(block.url)
-                                        .decoderFactory(SvgDecoder.Factory())
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = block.alt.ifBlank { "Article image" },
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 480.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReaderTextBlock(
-    content: AnnotatedString,
-    fontSizeScale: Float,
-    onOpenUrl: (String) -> Unit,
-    fontStyle: FontStyle = FontStyle.Normal,
-    modifier: Modifier = Modifier
-) {
-    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-    Text(
-        text = content,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontSize = (16 * fontSizeScale).sp,
-            lineHeight = (26 * fontSizeScale).sp,
-            fontStyle = fontStyle
-        ),
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-        onTextLayout = { layoutResult.value = it },
-        modifier = modifier.pointerInput(content) {
-            detectTapGestures { pos ->
-                layoutResult.value?.let { layout ->
-                    val offset = layout.getOffsetForPosition(pos)
-                    content.getStringAnnotations(tag = "URL", start = offset, end = offset)
-                        .firstOrNull()?.let { annotation ->
-                            onOpenUrl(annotation.item)
-                        }
-                }
-            }
-        }
-    )
-}
-
-@Composable
-private fun MinifluxActionRow(
-    entry: EntryEntity,
-    isCompact: Boolean = false,
-    onFetchFullText: (Long) -> Unit,
-    onMarkRead: (Long) -> Unit,
-    onMarkUnread: (Long) -> Unit,
-    onMarkAllRead: (() -> Unit)? = null,
-    onToggleBookmark: ((Long) -> Unit)? = null,
-    onNextEntry: (() -> Unit)?,
-    onPreviousEntry: (() -> Unit)?,
-    onBack: (() -> Unit)? = null,
-    onOpenBrowser: () -> Unit
-) {
-    var isMenuExpanded by remember { mutableStateOf(false) }
-    val haptics = LocalHapticFeedback.current
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // [ ← Articles ]
-            if (onBack != null) {
-                if (isCompact) {
-                    IconButton(
-                        onClick = onBack,
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Articles")
-                    }
-                } else {
-                    Button(
-                        onClick = onBack,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Articles")
-                    }
-                }
-            }
-
-            // [ 🌐 Full Text ]
-            if (isCompact) {
-                IconButton(
-                    onClick = { onFetchFullText(entry.id) },
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Icon(Icons.Default.Language, contentDescription = "Full Text")
-                }
-            } else {
-                Button(
-                    onClick = { onFetchFullText(entry.id) },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Icon(Icons.Default.Language, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Full Text")
-                }
-            }
-
-            // [ 🔗 Browser ]
-            if (isCompact) {
-                IconButton(
-                    onClick = onOpenBrowser,
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
-                ) {
-                    Icon(Icons.Default.OpenInBrowser, contentDescription = "Browser")
-                }
-            } else {
-                OutlinedButton(onClick = onOpenBrowser) {
-                    Icon(Icons.Default.OpenInBrowser, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Browser")
-                }
-            }
-        }
-
-        // Overflow / Others Menu
-        Box {
-            IconButton(onClick = { isMenuExpanded = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Others menu")
-            }
-
-            DropdownMenu(
-                expanded = isMenuExpanded,
-                onDismissRequest = { isMenuExpanded = false }
-            ) {
-                val isUnread = entry.status == "unread"
-
-                DropdownMenuItem(
-                    text = { Text(if (entry.starred) "Unstar Article" else "Star Article") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = null,
-                            tint = if (entry.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    },
-                    onClick = {
-                        isMenuExpanded = false
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onToggleBookmark?.invoke(entry.id)
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("Mark as Read") },
-                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null) },
-                    enabled = isUnread,
-                    onClick = {
-                        isMenuExpanded = false
-                        onMarkRead(entry.id)
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("Mark as Unread") },
-                    leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
-                    enabled = !isUnread,
-                    onClick = {
-                        isMenuExpanded = false
-                        onMarkUnread(entry.id)
-                    }
-                )
-
-                if (onMarkAllRead != null) {
-                    DropdownMenuItem(
-                        text = { Text("Mark All as Read") },
-                        leadingIcon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
-                        onClick = {
-                            isMenuExpanded = false
-                            onMarkAllRead()
-                        }
-                    )
-                }
-
-                DropdownMenuItem(
-                    text = { Text("Previous Article") },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) },
-                    enabled = onPreviousEntry != null,
-                    onClick = {
-                        isMenuExpanded = false
-                        onPreviousEntry?.invoke()
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("Next Article") },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
-                    enabled = onNextEntry != null,
-                    onClick = {
-                        isMenuExpanded = false
-                        onNextEntry?.invoke()
-                    }
-                )
             }
         }
     }

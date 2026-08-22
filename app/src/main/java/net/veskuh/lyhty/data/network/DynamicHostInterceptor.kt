@@ -1,4 +1,4 @@
-package net.veskuh.lyhty.data.remote
+package net.veskuh.lyhty.data.network
 
 import net.veskuh.lyhty.data.repository.MinifluxConfigRepository
 import net.veskuh.lyhty.util.LyhtyLogger
@@ -48,7 +48,7 @@ class DynamicHostInterceptor @Inject constructor(
                 }
 
                 val updatedUrl = builder.build()
-                LyhtyLogger.error("DynamicHost", "Routing request to resolved URL: $updatedUrl")
+                LyhtyLogger.debug("DynamicHost", "Routing request to resolved URL: $updatedUrl")
                 request = request.newBuilder()
                     .url(updatedUrl)
                     .build()

@@ -1,4 +1,4 @@
-package net.veskuh.lyhty.data.remote
+package net.veskuh.lyhty.data.network
 
 import kotlinx.coroutines.runBlocking
 import net.veskuh.lyhty.data.repository.FakeMinifluxConfigRepository

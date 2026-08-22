@@ -135,22 +135,42 @@ class MinifluxMainViewModel @Inject constructor(
         if (id != null) repository.getEntryById(id) else flowOf(null)
     }
 
-    private val _subState1 = combine(
-        _isLoading,
+    private val _feedTreeData = combine(
         _categories,
         _feeds,
-        _entries,
         _unreadCountsFeed,
         _unreadCountsCategory
-    ) { flows: Array<Any?> ->
-        @Suppress("UNCHECKED_CAST")
+    ) { categories, feeds, feedCounts, catCounts ->
+        FeedTreeData(categories, feeds, feedCounts, catCounts)
+    }
+
+    private val _readerPreferences = combine(
+        _readerTheme,
+        _fontSizeScale,
+        _showOnlyUnreadFeeds
+    ) { theme, fontScale, showOnlyUnread ->
+        ReaderPreferences(theme, fontScale, showOnlyUnread)
+    }
+
+    private val _errorState = combine(
+        _errorMessage,
+        _currentError
+    ) { message, currentError ->
+        ErrorState(message, currentError)
+    }
+
+    private val _subState1 = combine(
+        _isLoading,
+        _entries,
+        _feedTreeData
+    ) { loading, entries, tree ->
         PartialState1(
-            loading = flows[0] as Boolean,
-            categories = flows[1] as List<CategoryEntity>,
-            feeds = flows[2] as List<FeedEntity>,
-            entries = flows[3] as List<EntryEntity>,
-            feedCounts = flows[4] as Map<Long, Int>,
-            catCounts = flows[5] as Map<Long, Int>
+            loading = loading,
+            categories = tree.categories,
+            feeds = tree.feeds,
+            entries = entries,
+            feedCounts = tree.feedCounts,
+            catCounts = tree.catCounts
         )
     }
 
@@ -165,20 +185,16 @@ class MinifluxMainViewModel @Inject constructor(
 
     private val _subState3 = combine(
         _searchQuery,
-        _readerTheme,
-        _fontSizeScale,
-        _showOnlyUnreadFeeds,
-        _errorMessage,
-        _currentError
-    ) { flows: Array<Any?> ->
-        @Suppress("UNCHECKED_CAST")
+        _readerPreferences,
+        _errorState
+    ) { query, prefs, err ->
         PartialState3(
-            query = flows[0] as String,
-            theme = flows[1] as ReaderTheme,
-            fontScale = flows[2] as Float,
-            showOnlyUnread = flows[3] as Boolean,
-            error = flows[4] as String?,
-            currentErr = flows[5] as net.veskuh.lyhty.util.LyhtyError?
+            query = query,
+            theme = prefs.theme,
+            fontScale = prefs.fontScale,
+            showOnlyUnread = prefs.showOnlyUnread,
+            error = err.message,
+            currentErr = err.currentError
         )
     }
 
@@ -434,6 +450,24 @@ class MinifluxMainViewModel @Inject constructor(
         val categoryId: Long?,
         val feedId: Long?,
         val query: String
+    )
+
+    private data class FeedTreeData(
+        val categories: List<CategoryEntity>,
+        val feeds: List<FeedEntity>,
+        val feedCounts: Map<Long, Int>,
+        val catCounts: Map<Long, Int>
+    )
+
+    private data class ReaderPreferences(
+        val theme: ReaderTheme,
+        val fontScale: Float,
+        val showOnlyUnread: Boolean
+    )
+
+    private data class ErrorState(
+        val message: String?,
+        val currentError: net.veskuh.lyhty.util.LyhtyError?
     )
 
     private data class PartialState1(
