@@ -41,9 +41,18 @@ import androidx.compose.ui.unit.dp
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.util.DateFormatter
 
+import android.widget.Toast
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
+
+import androidx.compose.ui.platform.testTag
 
 @Composable
 fun EntryListPane(
@@ -57,10 +66,48 @@ fun EntryListPane(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
+    var totalDragX by remember { mutableFloatStateOf(0f) }
+
+    val gestureModifier = Modifier.pointerInput(entries, selectedEntry) {
+        detectHorizontalDragGestures(
+            onDragStart = { totalDragX = 0f },
+            onDragEnd = {
+                val thresholdPx = 60.dp.toPx()
+                if (totalDragX < -thresholdPx) {
+                    // Swiped Left -> Open next unread article
+                    val currentIndex = entries.indexOfFirst { it.id == selectedEntry?.id }
+                    val nextUnread = if (currentIndex != -1) {
+                        entries.drop(currentIndex + 1).firstOrNull { it.status == "unread" }
+                            ?: entries.firstOrNull { it.status == "unread" }
+                    } else {
+                        entries.firstOrNull { it.status == "unread" } ?: entries.firstOrNull()
+                    }
+
+                    if (nextUnread != null) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSelectEntry(nextUnread)
+                    } else {
+                        Toast.makeText(context, "No unread articles in this view", Toast.LENGTH_SHORT).show()
+                    }
+                } else if (totalDragX > thresholdPx && onBack != null) {
+                    // Swiped Right -> Back to feed list
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onBack()
+                }
+            },
+            onHorizontalDrag = { _, dragAmount ->
+                totalDragX += dragAmount
+            }
+        )
+    }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("EntryListPane")
+            .then(gestureModifier),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(

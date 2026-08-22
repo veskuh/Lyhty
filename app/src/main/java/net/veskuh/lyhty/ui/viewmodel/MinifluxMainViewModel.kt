@@ -328,17 +328,26 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun advanceToNextUnreadFeed(): String? {
         val state = uiState.value
-        val allFeeds = state.feeds
-        if (allFeeds.isEmpty()) return null
+        if (state.feeds.isEmpty()) return null
 
-        val currentFeedId = state.selectedFeed?.id
-        val currentFeedIdx = if (currentFeedId != null) allFeeds.indexOfFirst { it.id == currentFeedId } else -1
+        // Follow the exact visual sidebar order: feeds grouped by category, followed by uncategorized
+        val orderedFeeds = buildList {
+            for (category in state.categories) {
+                val childFeeds = state.feeds.filter { it.categoryId == category.id }
+                addAll(childFeeds)
+            }
+            val uncategorized = state.feeds.filter { feed -> state.categories.none { it.id == feed.categoryId } }
+            addAll(uncategorized)
+        }
+
+        val currentFeedId = state.selectedFeed?.id ?: state.selectedEntry?.feedId
+        val currentFeedIdx = if (currentFeedId != null) orderedFeeds.indexOfFirst { it.id == currentFeedId } else -1
 
         // Search sequentially starting after current feed
         val candidateFeeds = if (currentFeedIdx != -1) {
-            allFeeds.drop(currentFeedIdx + 1) + allFeeds.take(currentFeedIdx)
+            orderedFeeds.drop(currentFeedIdx + 1) + orderedFeeds.take(currentFeedIdx)
         } else {
-            allFeeds
+            orderedFeeds
         }
 
         val nextFeed = candidateFeeds.firstOrNull { feed ->

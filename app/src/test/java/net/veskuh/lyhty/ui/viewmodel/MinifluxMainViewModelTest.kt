@@ -229,15 +229,27 @@ class MinifluxMainViewModelTest {
     }
 
     @Test
-    fun `advanceToNextUnreadFeed selects next unread feed when available`() = runTest {
-        val feedsWithUnread = listOf(
-            FeedEntity(10, "TechCrunch", categoryId = 1),
-            FeedEntity(20, "Ars Technica", categoryId = 1)
+    fun `advanceToNextUnreadFeed follows visual sidebar tree order`() = runTest {
+        // Category 1: AlphaCat (Feed 10: TechCrunch [0], Feed 20: ZDNet [3])
+        // Category 2: BetaCat (Feed 30: AppleInsider [2])
+        // Uncategorized (Feed 40: BBC News [4])
+        val cats = listOf(
+            CategoryEntity(1, "AlphaCat"),
+            CategoryEntity(2, "BetaCat")
         )
+        val feedsWithUnread = listOf(
+            FeedEntity(30, "AppleInsider", categoryId = 2), // Alphabetically first in flat list, but under Category 2
+            FeedEntity(40, "BBC News", categoryId = 0),     // Uncategorized
+            FeedEntity(10, "TechCrunch", categoryId = 1),   // Under Category 1
+            FeedEntity(20, "ZDNet", categoryId = 1)         // Under Category 1
+        )
+        every { repository.getCategories() } returns flowOf(cats)
         every { repository.getFeeds() } returns flowOf(feedsWithUnread)
         every { repository.getUnreadCountsByFeed() } returns flowOf(listOf(
             FeedUnreadCount(10, 0),
-            FeedUnreadCount(20, 3)
+            FeedUnreadCount(20, 3),
+            FeedUnreadCount(30, 2),
+            FeedUnreadCount(40, 4)
         ))
 
         val viewModel = MinifluxMainViewModel(repository)
@@ -246,12 +258,27 @@ class MinifluxMainViewModelTest {
             awaitItem() // initial
             awaitItem() // loaded
 
-            viewModel.selectFeed(feedsWithUnread[0])
+            // Start at Feed 10 (under AlphaCat)
+            viewModel.selectFeed(feedsWithUnread.first { it.id == 10L })
             testDispatcher.scheduler.advanceUntilIdle()
-            awaitItem() // selection updated
+            awaitItem()
 
-            val nextTitle = viewModel.advanceToNextUnreadFeed()
-            assertEquals("Ars Technica", nextTitle)
+            // Next in AlphaCat should be ZDNet (Feed 20), NOT AppleInsider (which is first in flat alphabetical)
+            val nextTitle1 = viewModel.advanceToNextUnreadFeed()
+            assertEquals("ZDNet", nextTitle1)
+            testDispatcher.scheduler.advanceUntilIdle()
+            awaitItem()
+
+            // Next after ZDNet in sidebar tree should be Category 2's AppleInsider (Feed 30)
+            val nextTitle2 = viewModel.advanceToNextUnreadFeed()
+            assertEquals("AppleInsider", nextTitle2)
+            testDispatcher.scheduler.advanceUntilIdle()
+            awaitItem()
+
+            // Next after AppleInsider in sidebar tree should be Uncategorized's BBC News (Feed 40)
+            val nextTitle3 = viewModel.advanceToNextUnreadFeed()
+            assertEquals("BBC News", nextTitle3)
+
             cancelAndIgnoreRemainingEvents()
         }
     }
