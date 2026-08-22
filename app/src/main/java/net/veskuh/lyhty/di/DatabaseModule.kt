@@ -24,7 +24,10 @@ object DatabaseModule {
             LyhtyDatabase::class.java,
             "lyhty_miniflux.db"
         )
-            .addMigrations(net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_1_2)
+            .addMigrations(
+                net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_1_2,
+                net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_2_3
+            )
             .fallbackToDestructiveMigration()
             .build()
     }

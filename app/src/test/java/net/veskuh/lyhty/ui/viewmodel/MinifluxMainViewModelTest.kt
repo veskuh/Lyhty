@@ -214,9 +214,11 @@ class MinifluxMainViewModelTest {
 
         viewModel.markAsRead(101)
         viewModel.markAsUnread(102)
+        viewModel.toggleBookmark(101)
         testDispatcher.scheduler.advanceUntilIdle()
 
         coVerify { repository.markEntryAsRead(101) }
         coVerify { repository.markEntryAsUnread(102) }
+        coVerify { repository.toggleBookmark(101) }
     }
 }

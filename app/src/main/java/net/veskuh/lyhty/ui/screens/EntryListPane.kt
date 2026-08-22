@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -125,7 +126,26 @@ fun EntryListPane(
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSetStatusFilter("unread")
                     },
-                    label = { Text("Unread (${entries.count { it.status == "unread" }})") }
+                    label = {
+                        Text(if (statusFilter == "unread") "Unread (${entries.size})" else "Unread")
+                    }
+                )
+                FilterChip(
+                    selected = statusFilter == "starred",
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSetStatusFilter("starred")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    label = {
+                        Text(if (statusFilter == "starred") "Starred (${entries.size})" else "Starred")
+                    }
                 )
                 FilterChip(
                     selected = statusFilter == null,
@@ -133,7 +153,9 @@ fun EntryListPane(
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSetStatusFilter(null)
                     },
-                    label = { Text("All Entries (${entries.size})") }
+                    label = {
+                        Text(if (statusFilter == null) "All Entries (${entries.size})" else "All Entries")
+                    }
                 )
             }
 
@@ -182,14 +204,27 @@ fun EntryListPane(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = entry.feedTitle,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
+                                    Row(
                                         modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = entry.feedTitle,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (entry.starred) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = "Starred",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
                                     if (entry.status == "unread") {
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Box(

@@ -64,6 +64,7 @@ interface MinifluxApiService {
     @GET("v1/entries")
     suspend fun getEntries(
         @Query("status") status: String? = null,
+        @Query("starred") starred: String? = null,
         @Query("direction") direction: String = "desc",
         @Query("order") order: String = "published_at",
         @Query("limit") limit: Int = 100,
@@ -75,6 +76,9 @@ interface MinifluxApiService {
 
     @GET("v1/entries/{entry_id}")
     suspend fun getEntry(@Path("entry_id") entryId: Long): EntryDto
+
+    @PUT("v1/entries/{entry_id}/bookmark")
+    suspend fun toggleBookmark(@Path("entry_id") entryId: Long)
 
     @PUT("v1/entries")
     suspend fun updateEntriesStatus(@Body request: UpdateStatusRequestDto)

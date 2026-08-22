@@ -72,7 +72,7 @@ class FakeMinifluxRepository : MinifluxRepository {
         offset: Int
     ): Flow<List<EntryEntity>> = entriesState.map { list ->
         list.filter { entry ->
-            (statusFilter == null || entry.status == statusFilter) &&
+            (statusFilter == null || (statusFilter == "starred" && entry.starred) || (statusFilter != "starred" && entry.status == statusFilter)) &&
             (categoryId == null || entry.categoryId == categoryId) &&
             (feedId == null || entry.feedId == feedId)
         }
@@ -104,6 +104,18 @@ class FakeMinifluxRepository : MinifluxRepository {
     override suspend fun markEntriesAsRead(entryIds: List<Long>) {
         entriesState.value = entriesState.value.map {
             if (it.id in entryIds) it.copy(status = "read") else it
+        }
+    }
+
+    override suspend fun toggleBookmark(entryId: Long) {
+        entriesState.value = entriesState.value.map {
+            if (it.id == entryId) it.copy(starred = !it.starred) else it
+        }
+    }
+
+    override suspend fun setEntryStarred(entryId: Long, starred: Boolean) {
+        entriesState.value = entriesState.value.map {
+            if (it.id == entryId) it.copy(starred = starred) else it
         }
     }
 

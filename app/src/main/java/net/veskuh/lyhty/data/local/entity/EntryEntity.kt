@@ -18,7 +18,8 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["feedId"]),
         Index(value = ["status"]),
-        Index(value = ["categoryId"])
+        Index(value = ["categoryId"]),
+        Index(value = ["starred"])
     ]
 )
 data class EntryEntity(
@@ -32,6 +33,7 @@ data class EntryEntity(
     val author: String = "",
     val content: String = "",
     val status: String = "unread", // "unread" or "read"
+    val starred: Boolean = false,
     val publishedAt: String = "",
     val createdAt: String = "",
     val isSyncPending: Boolean = false

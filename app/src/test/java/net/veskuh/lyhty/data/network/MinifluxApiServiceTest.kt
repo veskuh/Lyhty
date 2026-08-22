@@ -75,6 +75,7 @@ class MinifluxApiServiceTest {
         val singleEntry = apiService.getEntry(101L)
         assertEquals(101L, singleEntry.id)
 
+        apiService.toggleBookmark(101L)
         apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds = listOf(101L), status = "read"))
 
         val feedEntries = apiService.getFeedEntries(10L)

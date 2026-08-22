@@ -49,6 +49,7 @@ class EntryListPaneTest {
         }
 
         composeTestRule.onNodeWithText("Unread (1)").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Starred").assertIsDisplayed()
         composeTestRule.onNodeWithText("Android 15 Released").assertIsDisplayed()
 
         composeTestRule.onNodeWithContentDescription("Clear search").performClick()

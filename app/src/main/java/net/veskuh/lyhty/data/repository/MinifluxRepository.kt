@@ -28,6 +28,8 @@ interface MinifluxRepository {
     suspend fun markEntryAsRead(entryId: Long)
     suspend fun markEntryAsUnread(entryId: Long)
     suspend fun markEntriesAsRead(entryIds: List<Long>)
+    suspend fun toggleBookmark(entryId: Long)
+    suspend fun setEntryStarred(entryId: Long, starred: Boolean)
     suspend fun fetchServerFullText(entryId: Long): String
     suspend fun flushPendingSyncs()
     suspend fun clearLocalDatabase()

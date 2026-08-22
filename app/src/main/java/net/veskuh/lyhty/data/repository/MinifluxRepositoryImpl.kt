@@ -79,7 +79,10 @@ class MinifluxRepositoryImpl @Inject constructor(
     override suspend fun syncEntries(status: String?, offset: Int, limit: Int) {
         LyhtyLogger.info("Repository", "Starting syncEntries(status=$status, offset=$offset, limit=$limit)...")
         try {
-            val response = apiService.getEntries(status = status, offset = offset, limit = limit)
+            val response = when (status) {
+                "starred" -> apiService.getEntries(starred = "1", offset = offset, limit = limit)
+                else -> apiService.getEntries(status = status, offset = offset, limit = limit)
+            }
             LyhtyLogger.info("Repository", "Fetched ${response.entries.size} entries (total server count: ${response.total}).")
 
             val entryEntities = response.entries.map { dto ->
@@ -94,6 +97,7 @@ class MinifluxRepositoryImpl @Inject constructor(
                     author = dto.author,
                     content = dto.content,
                     status = dto.status,
+                    starred = dto.starred,
                     publishedAt = dto.publishedAt,
                     createdAt = dto.createdAt,
                     isSyncPending = false
@@ -111,7 +115,7 @@ class MinifluxRepositoryImpl @Inject constructor(
         LyhtyLogger.info("Repository", "Marking entry $entryId as READ...")
         database.entryDao().updateEntryStatus(entryId, "read")
         try {
-            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(entryId), "read"))
+            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(entryId), status = "read"))
             database.entryDao().clearPendingSyncFlag(listOf(entryId))
             LyhtyLogger.debug("Repository", "Server successfully confirmed entry $entryId marked READ.")
         } catch (e: Exception) {
@@ -123,7 +127,7 @@ class MinifluxRepositoryImpl @Inject constructor(
         LyhtyLogger.info("Repository", "Marking entry $entryId as UNREAD...")
         database.entryDao().updateEntryStatus(entryId, "unread")
         try {
-            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(entryId), "unread"))
+            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(entryId), status = "unread"))
             database.entryDao().clearPendingSyncFlag(listOf(entryId))
             LyhtyLogger.debug("Repository", "Server successfully confirmed entry $entryId marked UNREAD.")
         } catch (e: Exception) {
@@ -138,11 +142,35 @@ class MinifluxRepositoryImpl @Inject constructor(
             database.entryDao().updateEntryStatus(id, "read")
         }
         try {
-            apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds, "read"))
+            apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds, status = "read"))
             database.entryDao().clearPendingSyncFlag(entryIds)
             LyhtyLogger.debug("Repository", "Server confirmed bulk mark READ for ${entryIds.size} entries.")
         } catch (e: Exception) {
             LyhtyLogger.warn("Repository", "Server bulk update failed for ${entryIds.size} entries. Retaining isSyncPending flag for offline batch flush.", e)
+        }
+    }
+
+    override suspend fun toggleBookmark(entryId: Long) {
+        LyhtyLogger.info("Repository", "Toggling bookmark for entry $entryId...")
+        database.entryDao().toggleEntryStarred(entryId)
+        try {
+            apiService.toggleBookmark(entryId)
+            database.entryDao().clearPendingSyncFlag(listOf(entryId))
+            LyhtyLogger.debug("Repository", "Server successfully confirmed entry $entryId bookmark toggled.")
+        } catch (e: Exception) {
+            LyhtyLogger.warn("Repository", "Server toggle bookmark failed for entry $entryId. Retaining isSyncPending flag for offline batch flush.", e)
+        }
+    }
+
+    override suspend fun setEntryStarred(entryId: Long, starred: Boolean) {
+        LyhtyLogger.info("Repository", "Setting starred=$starred for entry $entryId...")
+        database.entryDao().updateEntryStarred(entryId, starred)
+        try {
+            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(entryId), starred = starred))
+            database.entryDao().clearPendingSyncFlag(listOf(entryId))
+            LyhtyLogger.debug("Repository", "Server confirmed starred=$starred for entry $entryId.")
+        } catch (e: Exception) {
+            LyhtyLogger.warn("Repository", "Server update failed for entry $entryId (starred=$starred). Retaining isSyncPending flag for offline batch flush.", e)
         }
     }
 
@@ -165,10 +193,11 @@ class MinifluxRepositoryImpl @Inject constructor(
         if (pendingEntries.isNotEmpty()) {
             val readIds = pendingEntries.filter { it.status == "read" }.map { it.id }
             val unreadIds = pendingEntries.filter { it.status == "unread" }.map { it.id }
+            val starredIds = pendingEntries.filter { it.starred }.map { it.id }
 
             if (readIds.isNotEmpty()) {
                 try {
-                    apiService.updateEntriesStatus(UpdateStatusRequestDto(readIds, "read"))
+                    apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds = readIds, status = "read"))
                     database.entryDao().clearPendingSyncFlag(readIds)
                     LyhtyLogger.info("Repository", "Flushed ${readIds.size} pending read entries to server.")
                 } catch (e: Exception) {
@@ -177,11 +206,20 @@ class MinifluxRepositoryImpl @Inject constructor(
             }
             if (unreadIds.isNotEmpty()) {
                 try {
-                    apiService.updateEntriesStatus(UpdateStatusRequestDto(unreadIds, "unread"))
+                    apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds = unreadIds, status = "unread"))
                     database.entryDao().clearPendingSyncFlag(unreadIds)
                     LyhtyLogger.info("Repository", "Flushed ${unreadIds.size} pending unread entries to server.")
                 } catch (e: Exception) {
                     LyhtyLogger.warn("Repository", "Failed flushing pending unread entries", e)
+                }
+            }
+            if (starredIds.isNotEmpty()) {
+                try {
+                    apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds = starredIds, starred = true))
+                    database.entryDao().clearPendingSyncFlag(starredIds)
+                    LyhtyLogger.info("Repository", "Flushed ${starredIds.size} pending starred entries to server.")
+                } catch (e: Exception) {
+                    LyhtyLogger.warn("Repository", "Failed flushing pending starred entries", e)
                 }
             }
         }

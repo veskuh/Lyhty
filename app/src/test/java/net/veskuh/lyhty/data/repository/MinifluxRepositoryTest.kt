@@ -112,4 +112,28 @@ class MinifluxRepositoryTest {
         val updatedEntry = repository.getEntryById(101L).first()
         assertEquals(content, updatedEntry?.content)
     }
+
+    @Test
+    fun `toggleBookmark updates local starred and handles offline isSyncPending`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries(status = "unread")
+
+        // 1. Online toggle bookmark
+        repository.toggleBookmark(101L)
+        val starredEntry = repository.getEntryById(101L).first()
+        assertTrue(starredEntry?.starred == true)
+
+        // 2. Offline toggle bookmark (simulated failure)
+        simulatedServer.enqueueError(500, "Offline")
+        repository.toggleBookmark(102L)
+        val pendingSyncEntries = database.entryDao().getPendingSyncEntries()
+        assertEquals(1, pendingSyncEntries.size)
+        assertEquals(102L, pendingSyncEntries[0].id)
+        assertTrue(pendingSyncEntries[0].starred)
+
+        // 3. Flush pending syncs once back online
+        repository.flushPendingSyncs()
+        val emptyPending = database.entryDao().getPendingSyncEntries()
+        assertTrue(emptyPending.isEmpty())
+    }
 }

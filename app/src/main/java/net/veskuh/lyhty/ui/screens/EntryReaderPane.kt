@@ -64,6 +64,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -131,6 +133,7 @@ fun EntryReaderPane(
     onMarkRead: (Long) -> Unit,
     onMarkUnread: (Long) -> Unit,
     onMarkAllRead: (() -> Unit)? = null,
+    onToggleBookmark: ((Long) -> Unit)? = null,
     onNextEntry: (() -> Boolean)? = null,
     onPreviousEntry: (() -> Boolean)? = null,
     onAdvanceToNextFeed: (() -> String?)? = null,
@@ -310,6 +313,7 @@ fun EntryReaderPane(
                                 onMarkRead = onMarkRead,
                                 onMarkUnread = onMarkUnread,
                                 onMarkAllRead = onMarkAllRead,
+                                onToggleBookmark = onToggleBookmark,
                                 onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
                                 onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
                                 onBack = onBack,
@@ -381,6 +385,7 @@ fun EntryReaderPane(
                         onMarkRead = onMarkRead,
                         onMarkUnread = onMarkUnread,
                         onMarkAllRead = onMarkAllRead,
+                        onToggleBookmark = onToggleBookmark,
                         onNextEntry = { slideDirection = 1; onNextEntry?.invoke() },
                         onPreviousEntry = { slideDirection = -1; onPreviousEntry?.invoke() },
                         onBack = onBack,
@@ -649,12 +654,14 @@ private fun MinifluxActionRow(
     onMarkRead: (Long) -> Unit,
     onMarkUnread: (Long) -> Unit,
     onMarkAllRead: (() -> Unit)? = null,
+    onToggleBookmark: ((Long) -> Unit)? = null,
     onNextEntry: (() -> Unit)?,
     onPreviousEntry: (() -> Unit)?,
     onBack: (() -> Unit)? = null,
     onOpenBrowser: () -> Unit
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -682,6 +689,45 @@ private fun MinifluxActionRow(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Articles")
+                    }
+                }
+            }
+
+            // [ ⭐ Star / Bookmark ]
+            if (onToggleBookmark != null) {
+                if (isCompact) {
+                    IconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleBookmark(entry.id)
+                        },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = if (entry.starred) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = if (entry.starred) "Unstar Article" else "Star Article",
+                            tint = if (entry.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleBookmark(entry.id)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (entry.starred) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = if (entry.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (entry.starred) "Starred" else "Star")
                     }
                 }
             }
@@ -733,6 +779,20 @@ private fun MinifluxActionRow(
                 onDismissRequest = { isMenuExpanded = false }
             ) {
                 val isUnread = entry.status == "unread"
+
+                DropdownMenuItem(
+                    text = { Text(if (entry.starred) "Remove Star" else "Star Article") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = null
+                        )
+                    },
+                    onClick = {
+                        isMenuExpanded = false
+                        onToggleBookmark?.invoke(entry.id)
+                    }
+                )
 
                 DropdownMenuItem(
                     text = { Text("Mark as Read") },

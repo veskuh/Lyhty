@@ -79,7 +79,10 @@ class MinifluxMainViewModel @Inject constructor(
                 configRepository?.saveConfig(serverUrl, apiKey)
                 repository.clearLocalDatabase()
                 repository.syncCategoriesAndFeeds()
-                repository.syncEntries(_statusFilter.value)
+                repository.syncEntries("starred")
+                if (_statusFilter.value != "starred") {
+                    repository.syncEntries(_statusFilter.value)
+                }
             } catch (e: Exception) {
                 handleException(e)
             } finally {
@@ -227,7 +230,10 @@ class MinifluxMainViewModel @Inject constructor(
             try {
                 repository.flushPendingSyncs()
                 repository.syncCategoriesAndFeeds()
-                repository.syncEntries(_statusFilter.value)
+                repository.syncEntries("starred")
+                if (_statusFilter.value != "starred") {
+                    repository.syncEntries(_statusFilter.value)
+                }
             } catch (e: Exception) {
                 handleException(e)
             } finally {
@@ -334,6 +340,13 @@ class MinifluxMainViewModel @Inject constructor(
     fun setStatusFilter(filter: String?) {
         _statusFilter.value = filter
         activeReadingList = emptyList()
+        viewModelScope.launch {
+            try {
+                repository.syncEntries(filter)
+            } catch (e: Exception) {
+                handleException(e)
+            }
+        }
     }
 
     fun setSearchQuery(query: String) {
@@ -360,6 +373,12 @@ class MinifluxMainViewModel @Inject constructor(
     fun markAsUnread(entryId: Long) {
         viewModelScope.launch {
             repository.markEntryAsUnread(entryId)
+        }
+    }
+
+    fun toggleBookmark(entryId: Long) {
+        viewModelScope.launch {
+            repository.toggleBookmark(entryId)
         }
     }
 

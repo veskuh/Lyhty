@@ -36,6 +36,7 @@ data class EntryDto(
     @SerialName("user_id") val userId: Long = 0,
     @SerialName("feed_id") val feedId: Long,
     val status: String, // "unread" or "read"
+    val starred: Boolean = false,
     val title: String,
     val url: String = "",
     @SerialName("comments_url") val commentsUrl: String = "",
@@ -55,7 +56,8 @@ data class EntriesResponseDto(
 @Serializable
 data class UpdateStatusRequestDto(
     @SerialName("entry_ids") val entryIds: List<Long>,
-    val status: String // "read" or "unread"
+    val status: String? = null, // "read" or "unread"
+    val starred: Boolean? = null
 )
 
 @Serializable

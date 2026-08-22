@@ -14,7 +14,9 @@ interface EntryDao {
     @Query("""
         SELECT entries.* FROM entries 
         LEFT JOIN feeds ON entries.feedId = feeds.id
-        WHERE (:statusFilter IS NULL OR entries.status = :statusFilter)
+        WHERE (:statusFilter IS NULL 
+               OR (:statusFilter = 'starred' AND entries.starred = 1)
+               OR (:statusFilter != 'starred' AND entries.status = :statusFilter))
           AND (:categoryId IS NULL OR feeds.categoryId = :categoryId)
           AND (:feedId IS NULL OR entries.feedId = :feedId)
         ORDER BY entries.publishedAt DESC
@@ -52,12 +54,19 @@ interface EntryDao {
         insertEntriesRaw(entries)
         pendingBefore.forEach { (id, pendingEntity) ->
             updateEntryStatus(id, pendingEntity.status)
+            updateEntryStarred(id, pendingEntity.starred)
         }
         insertFtsIndex(entryIds)
     }
 
     @Query("UPDATE entries SET status = :status, isSyncPending = 1 WHERE id = :entryId")
     suspend fun updateEntryStatus(entryId: Long, status: String)
+
+    @Query("UPDATE entries SET starred = :starred, isSyncPending = 1 WHERE id = :entryId")
+    suspend fun updateEntryStarred(entryId: Long, starred: Boolean)
+
+    @Query("UPDATE entries SET starred = CASE WHEN starred = 1 THEN 0 ELSE 1 END, isSyncPending = 1 WHERE id = :entryId")
+    suspend fun toggleEntryStarred(entryId: Long)
 
     @Query("UPDATE entries SET content = :content WHERE id = :entryId")
     suspend fun updateEntryContent(entryId: Long, content: String)

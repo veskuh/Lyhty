@@ -323,6 +323,7 @@ private fun BoundEntryReaderPane(
         onMarkRead = { id -> viewModel.markAsRead(id) },
         onMarkUnread = { id -> viewModel.markAsUnread(id) },
         onMarkAllRead = { viewModel.markAllAsRead() },
+        onToggleBookmark = { id -> viewModel.toggleBookmark(id) },
         onNextEntry = { viewModel.selectNextEntry() },
         onPreviousEntry = { viewModel.selectPreviousEntry() },
         onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },

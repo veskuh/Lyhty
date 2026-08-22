@@ -17,7 +17,7 @@ import net.veskuh.lyhty.data.local.entity.FeedEntity
         EntryEntity::class,
         EntryFtsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class LyhtyDatabase : RoomDatabase() {
