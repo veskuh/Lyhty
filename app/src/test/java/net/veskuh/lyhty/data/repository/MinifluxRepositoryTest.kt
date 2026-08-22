@@ -135,5 +135,18 @@ class MinifluxRepositoryTest {
         repository.flushPendingSyncs()
         val emptyPending = database.entryDao().getPendingSyncEntries()
         assertTrue(emptyPending.isEmpty())
+
+        // 4. Offline UNSTAR toggle (simulated failure)
+        simulatedServer.enqueueError(500, "Offline")
+        repository.toggleBookmark(102L)
+        val pendingUnstar = database.entryDao().getPendingSyncEntries()
+        assertEquals(1, pendingUnstar.size)
+        assertEquals(102L, pendingUnstar[0].id)
+        assertTrue(!pendingUnstar[0].starred)
+
+        // 5. Flush pending unstar syncs
+        repository.flushPendingSyncs()
+        val emptyPendingAfterUnstar = database.entryDao().getPendingSyncEntries()
+        assertTrue(emptyPendingAfterUnstar.isEmpty())
     }
 }

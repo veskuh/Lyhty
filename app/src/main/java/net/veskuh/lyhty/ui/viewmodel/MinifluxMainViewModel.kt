@@ -340,11 +340,13 @@ class MinifluxMainViewModel @Inject constructor(
     fun setStatusFilter(filter: String?) {
         _statusFilter.value = filter
         activeReadingList = emptyList()
-        viewModelScope.launch {
-            try {
-                repository.syncEntries(filter)
-            } catch (e: Exception) {
-                handleException(e)
+        if (filter == "starred") {
+            viewModelScope.launch {
+                try {
+                    repository.syncEntries("starred")
+                } catch (e: Exception) {
+                    handleException(e)
+                }
             }
         }
     }

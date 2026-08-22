@@ -693,45 +693,6 @@ private fun MinifluxActionRow(
                 }
             }
 
-            // [ ⭐ Star / Bookmark ]
-            if (onToggleBookmark != null) {
-                if (isCompact) {
-                    IconButton(
-                        onClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onToggleBookmark(entry.id)
-                        },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = if (entry.starred) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
-                    ) {
-                        Icon(
-                            imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = if (entry.starred) "Unstar Article" else "Star Article",
-                            tint = if (entry.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onToggleBookmark(entry.id)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (entry.starred) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                            contentColor = if (entry.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Icon(
-                            imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (entry.starred) "Starred" else "Star")
-                    }
-                }
-            }
-
             // [ 🌐 Full Text ]
             if (isCompact) {
                 IconButton(
@@ -781,15 +742,17 @@ private fun MinifluxActionRow(
                 val isUnread = entry.status == "unread"
 
                 DropdownMenuItem(
-                    text = { Text(if (entry.starred) "Remove Star" else "Star Article") },
+                    text = { Text(if (entry.starred) "Unstar Article" else "Star Article") },
                     leadingIcon = {
                         Icon(
                             imageVector = if (entry.starred) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = null
+                            contentDescription = null,
+                            tint = if (entry.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     },
                     onClick = {
                         isMenuExpanded = false
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onToggleBookmark?.invoke(entry.id)
                     }
                 )

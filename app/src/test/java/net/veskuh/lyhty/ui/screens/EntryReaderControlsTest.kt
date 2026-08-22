@@ -42,16 +42,18 @@ class EntryReaderControlsTest {
         var prevClicked = false
         var nextClicked = false
         var markUnreadClicked = false
+        var starClicked = false
 
         composeTestRule.setContent {
             EntryReaderPane(
-                entry = testEntry,
+                entry = testEntry.copy(starred = false),
                 postureInfo = PostureInfo(DevicePosture.NORMAL),
                 fontSizeScale = 1.0f,
                 readerTheme = ReaderTheme.OLED_DARK,
                 onFetchFullText = {},
                 onMarkRead = {},
                 onMarkUnread = { markUnreadClicked = true },
+                onToggleBookmark = { starClicked = true },
                 onPreviousEntry = { prevClicked = true; true },
                 onNextEntry = { nextClicked = true; true }
             )
@@ -76,6 +78,11 @@ class EntryReaderControlsTest {
         composeTestRule.onNodeWithContentDescription("Others menu").performClick()
         composeTestRule.onNode(hasText("Mark as Unread") and hasClickAction()).performClick()
         assertTrue(markUnreadClicked)
+
+        // Open overflow menu for Star Article
+        composeTestRule.onNodeWithContentDescription("Others menu").performClick()
+        composeTestRule.onNode(hasText("Star Article") and hasClickAction()).performClick()
+        assertTrue(starClicked)
     }
 
     @Test

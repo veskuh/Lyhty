@@ -113,12 +113,6 @@ class FakeMinifluxRepository : MinifluxRepository {
         }
     }
 
-    override suspend fun setEntryStarred(entryId: Long, starred: Boolean) {
-        entriesState.value = entriesState.value.map {
-            if (it.id == entryId) it.copy(starred = starred) else it
-        }
-    }
-
     override suspend fun fetchServerFullText(entryId: Long): String {
         val extracted = "<article><h1>Full Extracted Text</h1><p>Full content text</p></article>"
         entriesState.value = entriesState.value.map {

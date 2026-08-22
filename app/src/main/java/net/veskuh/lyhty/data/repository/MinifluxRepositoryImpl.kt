@@ -162,18 +162,6 @@ class MinifluxRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun setEntryStarred(entryId: Long, starred: Boolean) {
-        LyhtyLogger.info("Repository", "Setting starred=$starred for entry $entryId...")
-        database.entryDao().updateEntryStarred(entryId, starred)
-        try {
-            apiService.updateEntriesStatus(UpdateStatusRequestDto(listOf(entryId), starred = starred))
-            database.entryDao().clearPendingSyncFlag(listOf(entryId))
-            LyhtyLogger.debug("Repository", "Server confirmed starred=$starred for entry $entryId.")
-        } catch (e: Exception) {
-            LyhtyLogger.warn("Repository", "Server update failed for entry $entryId (starred=$starred). Retaining isSyncPending flag for offline batch flush.", e)
-        }
-    }
-
     override suspend fun fetchServerFullText(entryId: Long): String {
         LyhtyLogger.info("Repository", "Fetching server-side readability content for entry $entryId...")
         return try {
@@ -194,6 +182,7 @@ class MinifluxRepositoryImpl @Inject constructor(
             val readIds = pendingEntries.filter { it.status == "read" }.map { it.id }
             val unreadIds = pendingEntries.filter { it.status == "unread" }.map { it.id }
             val starredIds = pendingEntries.filter { it.starred }.map { it.id }
+            val unstarredIds = pendingEntries.filter { !it.starred }.map { it.id }
 
             if (readIds.isNotEmpty()) {
                 try {
@@ -220,6 +209,15 @@ class MinifluxRepositoryImpl @Inject constructor(
                     LyhtyLogger.info("Repository", "Flushed ${starredIds.size} pending starred entries to server.")
                 } catch (e: Exception) {
                     LyhtyLogger.warn("Repository", "Failed flushing pending starred entries", e)
+                }
+            }
+            if (unstarredIds.isNotEmpty()) {
+                try {
+                    apiService.updateEntriesStatus(UpdateStatusRequestDto(entryIds = unstarredIds, starred = false))
+                    database.entryDao().clearPendingSyncFlag(unstarredIds)
+                    LyhtyLogger.info("Repository", "Flushed ${unstarredIds.size} pending unstarred entries to server.")
+                } catch (e: Exception) {
+                    LyhtyLogger.warn("Repository", "Failed flushing pending unstarred entries", e)
                 }
             }
         }
