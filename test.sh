@@ -1,7 +1,16 @@
 #!/bin/bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
-export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
-export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+if [ -z "$JAVA_HOME" ] && [ -d "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" ]; then
+  export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+fi
+if [ -z "$ANDROID_HOME" ] && [ -d "/opt/homebrew/share/android-commandlinetools" ]; then
+  export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+fi
+if [ -n "$JAVA_HOME" ]; then
+  export PATH=$JAVA_HOME/bin:$PATH
+fi
+if [ -n "$ANDROID_HOME" ] && [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ]; then
+  export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+fi
 
 if [ -d "app/build/kspCaches" ]; then
   ./gradlew --stop > /dev/null 2>&1
