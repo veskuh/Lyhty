@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Make scripts executable
+        run: chmod +x gradlew test.sh coverage.sh
+
+      - name: Run test suite
+        run: ./test.sh
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Prepare Release Artifacts
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          APK_NAME="Lyhty-${TAG_NAME}.apk"
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/release/app-release.apk "release-artifacts/${APK_NAME}"
+          cd release-artifacts
+          sha256sum "${APK_NAME}" > "${APK_NAME}.sha256"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          gh release create "${TAG_NAME}" \
+            release-artifacts/* \
+            --title "Lyhty ${TAG_NAME}" \
+            --generate-notes
