@@ -330,8 +330,6 @@ private fun BoundEntryReaderPane(
         onNextEntry = { viewModel.selectNextEntry() },
         onPreviousEntry = { viewModel.selectPreviousEntry() },
         onAdvanceToNextFeed = { viewModel.advanceToNextUnreadFeed() },
-        onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
-        onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
         onBack = onBack
     )
 }

@@ -24,13 +24,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -75,8 +68,6 @@ fun EntryReaderPane(
     onNextEntry: (() -> Boolean)? = null,
     onPreviousEntry: (() -> Boolean)? = null,
     onAdvanceToNextFeed: (() -> String?)? = null,
-    onSetTheme: ((ReaderTheme) -> Unit)? = null,
-    onSetFontSizeScale: ((Float) -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -174,74 +165,6 @@ fun EntryReaderPane(
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
-
-            // Top Reader Quick-Bar (Font size & Theme toggles)
-            if (onSetTheme != null || onSetFontSizeScale != null) {
-                var isThemeMenuExpanded by remember { mutableStateOf(false) }
-                var isFontMenuExpanded by remember { mutableStateOf(false) }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onSetFontSizeScale != null) {
-                        Box {
-                            IconButton(onClick = { isFontMenuExpanded = true }) {
-                                Icon(Icons.Default.FormatSize, contentDescription = "Font Size")
-                            }
-                            DropdownMenu(
-                                expanded = isFontMenuExpanded,
-                                onDismissRequest = { isFontMenuExpanded = false }
-                            ) {
-                                listOf(0.85f to "Small (85%)", 1.0f to "Default (100%)", 1.15f to "Large (115%)", 1.3f to "Extra Large (130%)").forEach { (scale, label) ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = label,
-                                                fontWeight = if (kotlin.math.abs(fontSizeScale - scale) < 0.05f) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        },
-                                        onClick = {
-                                            isFontMenuExpanded = false
-                                            onSetFontSizeScale(scale)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (onSetTheme != null) {
-                        Box {
-                            IconButton(onClick = { isThemeMenuExpanded = true }) {
-                                Icon(Icons.Default.Palette, contentDescription = "Reader Theme")
-                            }
-                            DropdownMenu(
-                                expanded = isThemeMenuExpanded,
-                                onDismissRequest = { isThemeMenuExpanded = false }
-                            ) {
-                                listOf(ReaderTheme.OLED_DARK to "OLED Black", ReaderTheme.SEPIA to "Warm Sepia", ReaderTheme.LIGHT to "Light").forEach { (theme, label) ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = label,
-                                                fontWeight = if (readerTheme == theme) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        },
-                                        onClick = {
-                                            isThemeMenuExpanded = false
-                                            onSetTheme(theme)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
 
             if (isFlexMode) {
                 // Tabletop / Flex-Mode Split
