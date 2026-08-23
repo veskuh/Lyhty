@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import net.veskuh.lyhty.data.local.entity.EntryEntity
@@ -27,9 +28,8 @@ class EntryListPaneTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun entryListPaneRendersEntriesAndClearSearch() {
+    fun entryListPaneRendersEntriesAndDynamicHeader() {
         var selectedEntryId: Long? = null
-        var searchCleared = false
 
         val entry = EntryEntity(
             id = 101,
@@ -45,19 +45,49 @@ class EntryListPaneTest {
                 entries = listOf(entry),
                 selectedEntry = null,
                 searchQuery = "Android",
-                onSelectEntry = { selectedEntryId = it.id },
-                onSearchQueryChange = { if (it.isEmpty()) searchCleared = true }
+                onSelectEntry = { selectedEntryId = it.id }
             )
         }
 
-        composeTestRule.onNodeWithText("Articles").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Search Results").assertIsDisplayed()
         composeTestRule.onNodeWithText("Android 15 Released").assertIsDisplayed()
-
-        composeTestRule.onNodeWithContentDescription("Clear search").performClick()
-        assertTrue(searchCleared)
 
         composeTestRule.onNodeWithText("Android 15 Released").performClick()
         assertEquals(101L, selectedEntryId)
+    }
+
+    @Test
+    fun `entryListPane renders search bar when isSearchActive is true`() {
+        var query = ""
+        var closeCalled = false
+
+        val entry = EntryEntity(
+            id = 101,
+            feedId = 10,
+            feedTitle = "TechCrunch",
+            title = "Android 15 Released",
+            content = "Content",
+            status = "unread"
+        )
+
+        composeTestRule.setContent {
+            EntryListPane(
+                entries = listOf(entry),
+                selectedEntry = null,
+                searchQuery = query,
+                isSearchActive = true,
+                onSelectEntry = {},
+                onSearchQueryChange = { query = it },
+                onCloseSearch = { closeCalled = true }
+            )
+        }
+
+        composeTestRule.onNodeWithText("Search all articles...").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Search all articles...").performTextInput("Android")
+        assertEquals("Android", query)
+
+        composeTestRule.onNodeWithContentDescription("Close search").performClick()
+        assertTrue(closeCalled)
     }
 
     @Test
@@ -87,8 +117,7 @@ class EntryListPaneTest {
                 entries = entries,
                 selectedEntry = null,
                 searchQuery = "",
-                onSelectEntry = { selectedEntryId = it.id },
-                onSearchQueryChange = {}
+                onSelectEntry = { selectedEntryId = it.id }
             )
         }
 
@@ -119,7 +148,6 @@ class EntryListPaneTest {
                 selectedEntry = null,
                 searchQuery = "",
                 onSelectEntry = {},
-                onSearchQueryChange = {},
                 onBack = { backCalled = true }
             )
         }

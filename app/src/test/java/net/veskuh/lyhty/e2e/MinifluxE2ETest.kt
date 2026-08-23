@@ -12,17 +12,22 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import net.veskuh.lyhty.data.local.LyhtyDatabase
+import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.EntryEntity
+import net.veskuh.lyhty.data.local.entity.FeedEntity
 import net.veskuh.lyhty.data.repository.MinifluxRepositoryImpl
 import net.veskuh.lyhty.di.TestNetworkFactory
 import net.veskuh.lyhty.testdouble.FakeMinifluxRepository
 import net.veskuh.lyhty.testdouble.SimulatedMinifluxServer
 import net.veskuh.lyhty.ui.components.DevicePosture
 import net.veskuh.lyhty.ui.components.PostureInfo
+import net.veskuh.lyhty.ui.screens.CategoryFeedTreePane
 import net.veskuh.lyhty.ui.screens.EntryListPane
 import net.veskuh.lyhty.ui.screens.EntryReaderPane
 import net.veskuh.lyhty.ui.screens.LyhtyAdaptiveApp
 import net.veskuh.lyhty.ui.viewmodel.MinifluxMainViewModel
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performTextInput
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -93,31 +98,45 @@ class MinifluxE2ETest {
             val entries = repository.getEntries().first()
             val entry = entries[0]
 
-            var searchQueryState = "Android"
-            var searchCleared = false
+            var searchOpened = false
+            var searchQueryState = ""
 
+            // 1. Sidebar toolbar provides Search icon
             composeTestRule.setContent {
-                EntryListPane(
-                    entries = listOf(entry),
-                    selectedEntry = null,
-                    searchQuery = searchQueryState,
-                    onSelectEntry = {},
-                    onSearchQueryChange = {
-                        searchQueryState = it
-                        if (it.isEmpty()) searchCleared = true
-                    }
+                CategoryFeedTreePane(
+                    categories = listOf(CategoryEntity(1, "Tech")),
+                    feeds = listOf(FeedEntity(10, "TechCrunch", categoryId = 1)),
+                    selectedCategory = null,
+                    selectedFeed = null,
+                    onSelectCategory = {},
+                    onSelectFeed = {},
+                    onOpenSearch = { searchOpened = true },
+                    onSync = {}
                 )
             }
 
             composeTestRule.waitForIdle()
 
-            // Search bar displays query and clear button icon
-            composeTestRule.onNodeWithText("Android 15 Released with Foldable Enhancements").assertIsDisplayed()
-            composeTestRule.onNode(hasContentDescription("Clear search filter")).assertIsDisplayed()
+            composeTestRule.onNodeWithContentDescription("Search Articles").assertIsDisplayed()
+            composeTestRule.onNodeWithContentDescription("Search Articles").performClick()
+            assertTrue(searchOpened)
 
-            // Click Clear button
-            composeTestRule.onNode(hasContentDescription("Clear search filter")).performClick()
-            assertTrue(searchCleared)
+            // 2. EntryListPane renders focused search bar when search is active
+            composeTestRule.setContent {
+                EntryListPane(
+                    entries = listOf(entry),
+                    selectedEntry = null,
+                    searchQuery = searchQueryState,
+                    isSearchActive = true,
+                    onSelectEntry = {},
+                    onSearchQueryChange = { searchQueryState = it }
+                )
+            }
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNodeWithText("Search all articles...").assertIsDisplayed()
+            composeTestRule.onNodeWithText("Search all articles...").performTextInput("Android")
+            assertEquals("Android", searchQueryState)
 
             composeTestRule.setContent {}
             composeTestRule.waitForIdle()

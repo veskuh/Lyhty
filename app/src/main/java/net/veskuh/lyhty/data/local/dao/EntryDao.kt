@@ -39,27 +39,15 @@ interface EntryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntriesRaw(entries: List<EntryEntity>)
 
-    @Query("DELETE FROM entries_fts WHERE rowid IN (SELECT rowid FROM entries WHERE id IN (:entryIds))")
-    suspend fun deleteFtsIndex(entryIds: List<Long>)
-
-    @Query("""
-        INSERT INTO entries_fts(rowid, title, content)
-        SELECT rowid, title, content FROM entries WHERE id IN (:entryIds)
-    """)
-    suspend fun insertFtsIndex(entryIds: List<Long>)
-
     @Transaction
     suspend fun upsertEntriesWithFts(entries: List<EntryEntity>) {
         if (entries.isEmpty()) return
         val pendingBefore = getPendingSyncEntries().associateBy { it.id }
-        val entryIds = entries.map { it.id }
-        deleteFtsIndex(entryIds)
         insertEntriesRaw(entries)
         pendingBefore.forEach { (id, pendingEntity) ->
             updateEntryStatus(id, pendingEntity.status)
             updateEntryStarred(id, pendingEntity.starred)
         }
-        insertFtsIndex(entryIds)
     }
 
     @Query("UPDATE entries SET status = :status, isSyncPending = 1 WHERE id = :entryId")
@@ -99,7 +87,7 @@ interface EntryDao {
 
     @Query("""
         SELECT entries.* FROM entries
-        JOIN entries_fts ON entries.rowid = entries_fts.rowid
+        JOIN entries_fts ON entries.id = entries_fts.docid
         WHERE entries_fts MATCH :query
         ORDER BY publishedAt DESC
     """)

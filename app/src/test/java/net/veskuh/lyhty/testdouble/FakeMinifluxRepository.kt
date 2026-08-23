@@ -86,7 +86,12 @@ class FakeMinifluxRepository : MinifluxRepository {
 
     override fun searchEntries(query: String): Flow<List<EntryEntity>> =
         entriesState.map { list ->
-            list.filter { it.title.contains(query, ignoreCase = true) || it.content.contains(query, ignoreCase = true) }
+            list.filter {
+                it.title.contains(query, ignoreCase = true) ||
+                    it.content.contains(query, ignoreCase = true) ||
+                    it.feedTitle.contains(query, ignoreCase = true) ||
+                    it.author.contains(query, ignoreCase = true)
+            }
         }
 
     override suspend fun syncCategoriesAndFeeds() {}

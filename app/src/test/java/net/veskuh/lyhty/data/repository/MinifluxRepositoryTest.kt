@@ -57,16 +57,27 @@ class MinifluxRepositoryTest {
     }
 
     @Test
-    fun `syncEntries populates Room and enables FTS search`() = runTest {
+    fun `syncEntries populates Room and enables case-insensitive FTS search across title, content, and feed`() = runTest {
         repository.syncCategoriesAndFeeds()
         repository.syncEntries(status = "unread")
 
         val entries = repository.getEntries().first()
         assertEquals(2, entries.size)
 
-        val searchResults = repository.searchEntries("Android").first()
-        assertEquals(1, searchResults.size)
-        assertTrue(searchResults[0].title.contains("Android"))
+        // 1. Search by title (lowercase "android")
+        val searchByTitle = repository.searchEntries("android").first()
+        assertEquals(1, searchByTitle.size)
+        assertTrue(searchByTitle[0].title.contains("Android"))
+
+        // 2. Search by feed name (lowercase "tech")
+        val searchByFeed = repository.searchEntries("tech").first()
+        assertEquals(1, searchByFeed.size)
+        assertEquals("TechCrunch", searchByFeed[0].feedTitle)
+
+        // 3. Search by content (lowercase "multi")
+        val searchByContent = repository.searchEntries("multi").first()
+        assertEquals(1, searchByContent.size)
+        assertTrue(searchByContent[0].content.contains("multi-pane", ignoreCase = true))
     }
 
     @Test

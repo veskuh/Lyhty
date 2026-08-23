@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sync
@@ -34,6 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,6 +77,7 @@ fun CategoryFeedTreePane(
     onSelectFeed: (FeedEntity?) -> Unit,
     onSelectAllUnread: (() -> Unit)? = null,
     onSelectBookmarks: (() -> Unit)? = null,
+    onOpenSearch: (() -> Unit)? = null,
     onMarkCategoryAsRead: ((Long) -> Unit)? = null,
     onMarkFeedAsRead: ((Long) -> Unit)? = null,
     onMarkAllAsRead: (() -> Unit)? = null,
@@ -378,7 +382,7 @@ fun CategoryFeedTreePane(
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-            // Bottom Toolbar with Refresh & Settings Buttons
+            // Bottom Toolbar with Sync, Search & Settings Buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -391,6 +395,18 @@ fun CategoryFeedTreePane(
                         imageVector = Icons.Default.Sync,
                         contentDescription = "Refresh Feeds"
                     )
+                }
+
+                if (onOpenSearch != null) {
+                    IconButton(onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onOpenSearch()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search Articles"
+                        )
+                    }
                 }
 
                 if (onOpenSettings != null) {

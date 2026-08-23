@@ -18,6 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performTextInput
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -216,5 +217,32 @@ class CategoryFeedTreePaneTest {
 
         composeTestRule.onNodeWithText("Bookmarks").performClick()
         assertTrue(bookmarksClicked)
+    }
+
+    @Test
+    fun `categoryFeedTreePane bottom toolbar renders Search and invokes onOpenSearch`() {
+        var searchClicked = false
+
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(CategoryEntity(1, "Tech")),
+                feeds = listOf(FeedEntity(10, "TechCrunch", categoryId = 1)),
+                selectedCategory = null,
+                selectedFeed = null,
+                starredCount = 0,
+                statusFilter = "unread",
+                unreadCountsByFeed = emptyMap(),
+                unreadCountsByCategory = emptyMap(),
+                showOnlyUnreadFeeds = false,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onOpenSearch = { searchClicked = true },
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Search Articles").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Search Articles").performClick()
+        assertTrue(searchClicked)
     }
 }

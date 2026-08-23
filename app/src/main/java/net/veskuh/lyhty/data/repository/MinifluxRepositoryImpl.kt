@@ -12,6 +12,7 @@ import net.veskuh.lyhty.util.LyhtyLogger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Singleton
 class MinifluxRepositoryImpl @Inject constructor(
@@ -46,8 +47,13 @@ class MinifluxRepositoryImpl @Inject constructor(
     override fun getEntryById(entryId: Long): Flow<EntryEntity?> =
         database.entryDao().getEntryById(entryId)
 
-    override fun searchEntries(query: String): Flow<List<EntryEntity>> =
-        database.entryDao().searchEntries(query)
+    override fun searchEntries(query: String): Flow<List<EntryEntity>> {
+        val sanitized = query.trim().replace(Regex("[^a-zA-Z0-9äöåÄÖÅ\\s]"), " ")
+        val ftsTokens = sanitized.split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (ftsTokens.isEmpty()) return flowOf(emptyList())
+        val ftsQuery = ftsTokens.joinToString(" ") { "$it*" }
+        return database.entryDao().searchEntries(ftsQuery)
+    }
 
     override suspend fun syncCategoriesAndFeeds() {
         LyhtyLogger.info("Repository", "Starting syncCategoriesAndFeeds...")

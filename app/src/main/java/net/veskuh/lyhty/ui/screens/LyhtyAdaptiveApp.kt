@@ -147,6 +147,7 @@ fun LyhtyAdaptiveApp(
 
             val windowAdaptiveInfo = currentWindowAdaptiveInfo()
             val isExpandedWindow = windowAdaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+            var isSearchActive by remember { mutableStateOf(false) }
 
             if (isExpandedWindow) {
                 // Unfolded Dual-Pane Layout: Left = Categories Tree (pinned), Right = Articles / Reader / Settings
@@ -165,19 +166,32 @@ fun LyhtyAdaptiveApp(
                         readerTheme = uiState.readerTheme,
                         onSelectCategory = { category ->
                             isSettingsOpen = false
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
                             viewModel.selectCategory(category)
                         },
                         onSelectFeed = { feed ->
                             isSettingsOpen = false
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
                             viewModel.selectFeed(feed)
                         },
                         onSelectAllUnread = {
                             isSettingsOpen = false
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
                             viewModel.selectAllUnread()
                         },
                         onSelectBookmarks = {
                             isSettingsOpen = false
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
                             viewModel.selectBookmarks()
+                        },
+                        onOpenSearch = {
+                            isSettingsOpen = false
+                            viewModel.selectEntry(null)
+                            isSearchActive = true
                         },
                         onMarkCategoryAsRead = { categoryId -> viewModel.markCategoryAsRead(categoryId) },
                         onMarkFeedAsRead = { feedId -> viewModel.markFeedAsRead(feedId) },
@@ -208,10 +222,15 @@ fun LyhtyAdaptiveApp(
                                 entries = uiState.entries,
                                 selectedEntry = uiState.selectedEntry,
                                 searchQuery = uiState.searchQuery,
+                                isSearchActive = isSearchActive,
                                 onSelectEntry = { entry ->
                                     viewModel.selectEntry(entry.id)
                                 },
-                                onSearchQueryChange = { query -> viewModel.setSearchQuery(query) }
+                                onSearchQueryChange = { query -> viewModel.setSearchQuery(query) },
+                                onCloseSearch = {
+                                    isSearchActive = false
+                                    viewModel.setSearchQuery("")
+                                }
                             )
                         }
                     }
@@ -244,19 +263,32 @@ fun LyhtyAdaptiveApp(
                                     showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                                     readerTheme = uiState.readerTheme,
                                     onSelectCategory = { category ->
+                                        isSearchActive = false
+                                        viewModel.setSearchQuery("")
                                         viewModel.selectCategory(category)
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
                                     onSelectFeed = { feed ->
+                                        isSearchActive = false
+                                        viewModel.setSearchQuery("")
                                         viewModel.selectFeed(feed)
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
                                     onSelectAllUnread = {
+                                        isSearchActive = false
+                                        viewModel.setSearchQuery("")
                                         viewModel.selectAllUnread()
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
                                     onSelectBookmarks = {
+                                        isSearchActive = false
+                                        viewModel.setSearchQuery("")
                                         viewModel.selectBookmarks()
+                                        navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
+                                    },
+                                    onOpenSearch = {
+                                        viewModel.selectEntry(null)
+                                        isSearchActive = true
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
                                     onMarkCategoryAsRead = { categoryId -> viewModel.markCategoryAsRead(categoryId) },
@@ -283,13 +315,21 @@ fun LyhtyAdaptiveApp(
                                         entries = uiState.entries,
                                         selectedEntry = uiState.selectedEntry,
                                         searchQuery = uiState.searchQuery,
+                                        isSearchActive = isSearchActive,
                                         onSelectEntry = { entry ->
                                             viewModel.selectEntry(entry.id)
                                             navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, entry.id)
                                         },
                                         onSearchQueryChange = { query -> viewModel.setSearchQuery(query) },
+                                        onCloseSearch = {
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                        },
                                         onBack = {
-                                            if (navigator.canNavigateBack()) {
+                                            if (isSearchActive) {
+                                                isSearchActive = false
+                                                viewModel.setSearchQuery("")
+                                            } else if (navigator.canNavigateBack()) {
                                                 navigator.navigateBack()
                                             }
                                         }
