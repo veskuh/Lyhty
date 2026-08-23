@@ -6,6 +6,7 @@ An Android client for self-hosted [Miniflux](https://miniflux.app/) servers, tar
 
 Built with Jetpack Compose and Material 3 Adaptive. Syncs with the Miniflux v1 API.
 
+![Screenshot](assets/lyhty.png)
 ---
 
 ## Main Features
