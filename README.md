@@ -2,51 +2,40 @@
 
 Miniflux RSS reader for Android. Lyhty is Finnish for "lantern".
 
-An Android client for self-hosted [Miniflux](https://miniflux.app/) servers, targeting foldables (Honor Magic V5, Samsung Galaxy Z Fold, Pixel Fold), tablets, and phones.
+An Android client for self-hosted [Miniflux](https://miniflux.app/) servers, targeting foldables (Honor Magic V6, Samsung Galaxy Z Fold, Pixel Fold, etc.), tablets, and phones.
 
-Built with Jetpack Compose and Material 3 Adaptive. Syncs with the Miniflux v1 API. Offline-first.
+Built with Jetpack Compose and Material 3 Adaptive. Syncs with the Miniflux v1 API.
 
 ---
 
-## Features
+## Main Features
 
 - **Foldable and adaptive layout**
   - Dual-pane layout on unfolded displays and tablets: category/feed tree + article list or reader.
   - Single-pane list-detail navigation on cover displays and phones, with back-gesture handling.
-  - Folding posture awareness: tabletop (flex control desk), book, and flat modes.
-- **Star / bookmark**
-  - Star and unstar articles from the reader menu.
-  - "Starred" filter in the article list.
-  - Starred state syncs offline (both directions).
-- **Mark as read at category and feed level**
-  - Long-press a category or feed to mark all of its articles read in one batch.
-  - "Mark all as read" shortcut on the "All Unread Feeds" card.
+- **Bookmarks & unread shortcuts**
+  - Dedicated "Bookmarks" and "All Unread Feeds" quick-access cards at the top of the sidebar with live counts.
+  - Star and unstar articles from the reader menu with offline sync.
+- **Global full-text search (FTS)**
+  - Search across feed names, article titles, body content, and authors.
 - **Gestures**
   - Article list: swipe left to open the next unread article, swipe right to go back.
   - Reader: swipe between articles, quick-jump pill to the next unread feed.
 - **Article rendering**
-  - `HtmlParserUtil` parses headings, blockquotes, bullet lists, and images (SVG/raster via Coil).
-  - Reader typography scaling and themes (OLED black, sepia, light).
-- **Offline-first sync**
-  - Local storage in Room.
-  - `NetworkMonitor` detects connectivity; pending actions sync on reconnection.
-- **Credentials**
-  - API key stored in `EncryptedSharedPreferences`.
-  - URL normalization (trailing `/v1`, extra slashes, protocol prefixes).
-  - Multi-header auth fallback (`X-Auth-Token`, `X-Miniflux-API-Key`, `Authorization`).
+  - `HtmlParserUtil` parses headings, blockquotes, bullet lists, and images.
+  - Reader typography scaling and themes (OLED black, sepia, light) configurable in Settings.
 
 ---
 
 ## Tech stack
 
-- **Language**: Kotlin 2.1.0
-- **UI**: Jetpack Compose, Material 3 Adaptive (`ListDetailPaneScaffold`)
-- **DI**: Dagger Hilt
-- **Networking**: Retrofit 2, OkHttp 4, kotlinx.serialization (dynamic host and retry interceptors)
-- **Storage**: Room + SQLite FTS, EncryptedSharedPreferences (AndroidX Security Crypto)
+- **Language**: Kotlin
+- **UI**: Jetpack Compose, Material 3 Adaptive
+- **Networking**: Retrofit 2, OkHttp 4, kotlinx.serialization
+- **Storage**: Room + SQLite
 - **Images**: Coil 2 with SVG decoder
 - **Concurrency**: Kotlin coroutines, StateFlow
-- **Tests**: JUnit 4, MockK, Robolectric, Turbine, Kover (122 unit and scenario tests)
+- **Tests**: JUnit 4, MockK, Robolectric, Turbine, Kover
 
 ---
 
@@ -75,7 +64,7 @@ See `AGENTS.md` for key flows, conventions, and gotchas.
 
 ### Prerequisites
 
-- Android Studio Ladybug (2024.2.1+) or command-line SDK tools.
+- Android Studio or command-line SDK tools.
 - JDK 21 (the build and `./test.sh` are pinned to OpenJDK 21).
 - A running Miniflux instance (v2.x with API enabled).
 
