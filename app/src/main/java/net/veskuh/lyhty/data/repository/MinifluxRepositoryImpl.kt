@@ -31,6 +31,9 @@ class MinifluxRepositoryImpl @Inject constructor(
     override fun getUnreadCountsByCategory(): Flow<List<CategoryUnreadCount>> =
         database.categoryDao().getUnreadCountsByCategory()
 
+    override fun getStarredCount(): Flow<Int> =
+        database.entryDao().getStarredCount()
+
     override fun getEntries(
         statusFilter: String?,
         categoryId: Long?,

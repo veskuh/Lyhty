@@ -64,6 +64,9 @@ class FakeMinifluxRepository : MinifluxRepository {
                 .map { (catId, entries) -> CategoryUnreadCount(catId, entries.size) }
         }
 
+    override fun getStarredCount(): Flow<Int> =
+        entriesState.map { list -> list.count { it.starred } }
+
     override fun getEntries(
         statusFilter: String?,
         categoryId: Long?,

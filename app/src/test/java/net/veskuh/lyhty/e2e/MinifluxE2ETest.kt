@@ -100,10 +100,8 @@ class MinifluxE2ETest {
                 EntryListPane(
                     entries = listOf(entry),
                     selectedEntry = null,
-                    statusFilter = "unread",
                     searchQuery = searchQueryState,
                     onSelectEntry = {},
-                    onSetStatusFilter = {},
                     onSearchQueryChange = {
                         searchQueryState = it
                         if (it.isEmpty()) searchCleared = true

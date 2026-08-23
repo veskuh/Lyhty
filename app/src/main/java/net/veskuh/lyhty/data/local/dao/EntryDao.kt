@@ -33,6 +33,9 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE id = :entryId LIMIT 1")
     fun getEntryById(entryId: Long): Flow<EntryEntity?>
 
+    @Query("SELECT COUNT(*) FROM entries WHERE starred = 1")
+    fun getStarredCount(): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntriesRaw(entries: List<EntryEntity>)
 

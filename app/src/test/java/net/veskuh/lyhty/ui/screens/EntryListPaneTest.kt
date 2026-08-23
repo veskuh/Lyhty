@@ -27,7 +27,7 @@ class EntryListPaneTest {
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun entryListPaneRendersEntriesFilterChipsAndClearSearch() {
+    fun entryListPaneRendersEntriesAndClearSearch() {
         var selectedEntryId: Long? = null
         var searchCleared = false
 
@@ -44,16 +44,13 @@ class EntryListPaneTest {
             EntryListPane(
                 entries = listOf(entry),
                 selectedEntry = null,
-                statusFilter = "unread",
                 searchQuery = "Android",
                 onSelectEntry = { selectedEntryId = it.id },
-                onSetStatusFilter = {},
                 onSearchQueryChange = { if (it.isEmpty()) searchCleared = true }
             )
         }
 
-        composeTestRule.onNodeWithText("Unread (1)").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Starred").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Articles").assertIsDisplayed()
         composeTestRule.onNodeWithText("Android 15 Released").assertIsDisplayed()
 
         composeTestRule.onNodeWithContentDescription("Clear search").performClick()
@@ -89,10 +86,8 @@ class EntryListPaneTest {
             EntryListPane(
                 entries = entries,
                 selectedEntry = null,
-                statusFilter = null,
                 searchQuery = "",
                 onSelectEntry = { selectedEntryId = it.id },
-                onSetStatusFilter = {},
                 onSearchQueryChange = {}
             )
         }
@@ -122,10 +117,8 @@ class EntryListPaneTest {
             EntryListPane(
                 entries = entries,
                 selectedEntry = null,
-                statusFilter = null,
                 searchQuery = "",
                 onSelectEntry = {},
-                onSetStatusFilter = {},
                 onSearchQueryChange = {},
                 onBack = { backCalled = true }
             )

@@ -12,6 +12,7 @@ interface MinifluxRepository {
     fun getFeeds(): Flow<List<FeedEntity>>
     fun getUnreadCountsByFeed(): Flow<List<FeedUnreadCount>>
     fun getUnreadCountsByCategory(): Flow<List<CategoryUnreadCount>>
+    fun getStarredCount(): Flow<Int>
     fun getEntries(
         statusFilter: String? = null,
         categoryId: Long? = null,

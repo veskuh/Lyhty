@@ -151,6 +151,20 @@ class MinifluxRepositoryTest {
     }
 
     @Test
+    fun `getStarredCount reflects number of starred articles`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries()
+
+        assertEquals(0, repository.getStarredCount().first())
+
+        repository.toggleBookmark(101L)
+        assertEquals(1, repository.getStarredCount().first())
+
+        repository.toggleBookmark(102L)
+        assertEquals(2, repository.getStarredCount().first())
+    }
+
+    @Test
     fun `markFeedAsRead and markCategoryAsRead update unread entries to read`() = runTest {
         repository.syncCategoriesAndFeeds()
         repository.syncEntries(status = "unread")

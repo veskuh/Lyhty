@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -65,10 +66,14 @@ fun CategoryFeedTreePane(
     selectedEntry: EntryEntity? = null,
     unreadCountsByCategory: Map<Long, Int> = emptyMap(),
     unreadCountsByFeed: Map<Long, Int> = emptyMap(),
+    starredCount: Int = 0,
+    statusFilter: String? = "unread",
     showOnlyUnreadFeeds: Boolean = true,
     readerTheme: ReaderTheme = ReaderTheme.OLED_DARK,
     onSelectCategory: (CategoryEntity?) -> Unit,
     onSelectFeed: (FeedEntity?) -> Unit,
+    onSelectAllUnread: (() -> Unit)? = null,
+    onSelectBookmarks: (() -> Unit)? = null,
     onMarkCategoryAsRead: ((Long) -> Unit)? = null,
     onMarkFeedAsRead: ((Long) -> Unit)? = null,
     onMarkAllAsRead: (() -> Unit)? = null,
@@ -148,7 +153,7 @@ fun CategoryFeedTreePane(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                if (visibleCategories.isEmpty() && uncategorizedFeeds.isEmpty()) {
+                if (categories.isEmpty() && feeds.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -160,17 +165,13 @@ fun CategoryFeedTreePane(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = if (categories.isEmpty() && feeds.isEmpty()) "📡 No Feeds or Categories" else "✨ All Catch Up!",
+                                text = "📡 No Feeds or Categories",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = if (categories.isEmpty() && feeds.isEmpty()) {
-                                    "Configure your Miniflux server URL and API key in Settings to sync your RSS feeds."
-                                } else {
-                                    "No unread items in any feed. You can toggle 'Hide feeds with no unread items' in Settings to view all feeds."
-                                },
+                                text = "Configure your Miniflux server URL and API key in Settings to sync your RSS feeds.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -179,7 +180,7 @@ fun CategoryFeedTreePane(
                             Button(onClick = { onOpenSettings?.invoke() }) {
                                 Icon(imageVector = Icons.Default.Settings, contentDescription = null)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (categories.isEmpty() && feeds.isEmpty()) "Configure Server" else "Settings")
+                                Text("Configure Server")
                             }
                         }
                     }
@@ -192,20 +193,25 @@ fun CategoryFeedTreePane(
                         // "All Unread" Entry Shortcut
                         item {
                             var showAllMenu by remember { mutableStateOf(false) }
+                            val isAllUnreadSelected = selectedCategory == null && selectedFeed == null && statusFilter != "starred"
                             FeedTreeCard(
                                 title = "All Unread Feeds",
                                 icon = Icons.Default.RssFeed,
                                 unreadCount = totalUnreadCount,
-                                isSelected = selectedCategory == null && selectedFeed == null,
-                                containerColor = if (selectedCategory == null && selectedFeed == null) {
+                                isSelected = isAllUnreadSelected,
+                                containerColor = if (isAllUnreadSelected) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
                                     MaterialTheme.colorScheme.surfaceContainerHigh
                                 },
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onSelectCategory(null)
-                                    onSelectFeed(null)
+                                    if (onSelectAllUnread != null) {
+                                        onSelectAllUnread()
+                                    } else {
+                                        onSelectCategory(null)
+                                        onSelectFeed(null)
+                                    }
                                 },
                                 onLongClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -215,6 +221,26 @@ fun CategoryFeedTreePane(
                                 onDismissMenu = { showAllMenu = false },
                                 menuActionText = "Mark all as read",
                                 onMenuAction = { onMarkAllAsRead?.invoke() }
+                            )
+                        }
+
+                        // "Bookmarks" Entry Shortcut
+                        item {
+                            val isBookmarksSelected = selectedCategory == null && selectedFeed == null && statusFilter == "starred"
+                            FeedTreeCard(
+                                title = "Bookmarks",
+                                icon = Icons.Default.Star,
+                                unreadCount = starredCount,
+                                isSelected = isBookmarksSelected,
+                                containerColor = if (isBookmarksSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                },
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSelectBookmarks?.invoke()
+                                }
                             )
                         }
 

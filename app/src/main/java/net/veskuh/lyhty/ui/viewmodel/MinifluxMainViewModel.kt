@@ -107,6 +107,7 @@ class MinifluxMainViewModel @Inject constructor(
     private val _feeds = repository.getFeeds()
     private val _unreadCountsFeed = repository.getUnreadCountsByFeed().map { list -> list.associate { it.feedId to it.count } }
     private val _unreadCountsCategory = repository.getUnreadCountsByCategory().map { list -> list.associate { it.categoryId to it.count } }
+    private val _starredCount = repository.getStarredCount()
 
     private val _entries = combine(
         _statusFilter,
@@ -139,9 +140,10 @@ class MinifluxMainViewModel @Inject constructor(
         _categories,
         _feeds,
         _unreadCountsFeed,
-        _unreadCountsCategory
-    ) { categories, feeds, feedCounts, catCounts ->
-        FeedTreeData(categories, feeds, feedCounts, catCounts)
+        _unreadCountsCategory,
+        _starredCount
+    ) { categories, feeds, feedCounts, catCounts, starredCount ->
+        FeedTreeData(categories, feeds, feedCounts, catCounts, starredCount)
     }
 
     private val _readerPreferences = combine(
@@ -170,7 +172,8 @@ class MinifluxMainViewModel @Inject constructor(
             feeds = tree.feeds,
             entries = entries,
             feedCounts = tree.feedCounts,
-            catCounts = tree.catCounts
+            catCounts = tree.catCounts,
+            starredCount = tree.starredCount
         )
     }
 
@@ -219,7 +222,8 @@ class MinifluxMainViewModel @Inject constructor(
             readerTheme = s3.theme,
             showOnlyUnreadFeeds = s3.showOnlyUnread,
             unreadCountsByFeed = s1.feedCounts,
-            unreadCountsByCategory = s1.catCounts
+            unreadCountsByCategory = s1.catCounts,
+            starredCount = s1.starredCount
         )
     }.stateIn(
         scope = viewModelScope,
@@ -270,6 +274,7 @@ class MinifluxMainViewModel @Inject constructor(
         _selectedCategoryId.value = categoryId
         _selectedFeedId.value = null
         _selectedEntryId.value = null
+        _statusFilter.value = "unread"
         activeReadingList = emptyList()
     }
 
@@ -280,6 +285,7 @@ class MinifluxMainViewModel @Inject constructor(
     fun selectFeed(feedId: Long?) {
         _selectedFeedId.value = feedId
         _selectedEntryId.value = null
+        _statusFilter.value = "unread"
         activeReadingList = emptyList()
         if (feedId != null) {
             val feed = uiState.value.feeds.find { it.id == feedId }
@@ -291,6 +297,27 @@ class MinifluxMainViewModel @Inject constructor(
 
     fun selectFeed(feed: FeedEntity?) {
         selectFeed(feed?.id)
+    }
+
+    fun selectAllUnread() {
+        _selectedCategoryId.value = null
+        _selectedFeedId.value = null
+        _selectedEntryId.value = null
+        _statusFilter.value = "unread"
+        activeReadingList = emptyList()
+    }
+
+    fun selectBookmarks() {
+        _selectedCategoryId.value = null
+        _selectedFeedId.value = null
+        _selectedEntryId.value = null
+        _statusFilter.value = "starred"
+        activeReadingList = emptyList()
+        viewModelScope.launch {
+            try {
+                repository.syncEntries("starred")
+            } catch (_: Exception) {}
+        }
     }
 
     fun selectEntry(entryId: Long?) {
@@ -465,7 +492,8 @@ class MinifluxMainViewModel @Inject constructor(
         val categories: List<CategoryEntity>,
         val feeds: List<FeedEntity>,
         val feedCounts: Map<Long, Int>,
-        val catCounts: Map<Long, Int>
+        val catCounts: Map<Long, Int>,
+        val starredCount: Int
     )
 
     private data class ReaderPreferences(
@@ -485,7 +513,8 @@ class MinifluxMainViewModel @Inject constructor(
         val feeds: List<FeedEntity>,
         val entries: List<EntryEntity>,
         val feedCounts: Map<Long, Int>,
-        val catCounts: Map<Long, Int>
+        val catCounts: Map<Long, Int>,
+        val starredCount: Int
     )
 
     private data class PartialState2(

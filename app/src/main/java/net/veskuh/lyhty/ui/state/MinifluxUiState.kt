@@ -24,5 +24,6 @@ data class MinifluxUiState(
     val readerTheme: ReaderTheme = ReaderTheme.OLED_DARK,
     val showOnlyUnreadFeeds: Boolean = true,
     val unreadCountsByFeed: Map<Long, Int> = emptyMap(),
-    val unreadCountsByCategory: Map<Long, Int> = emptyMap()
+    val unreadCountsByCategory: Map<Long, Int> = emptyMap(),
+    val starredCount: Int = 0
 )

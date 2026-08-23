@@ -63,6 +63,7 @@ class MinifluxMainViewModelTest {
         every { repository.getFeeds() } returns flowOf(testFeeds)
         every { repository.getUnreadCountsByFeed() } returns flowOf(listOf(FeedUnreadCount(10, 2)))
         every { repository.getUnreadCountsByCategory() } returns flowOf(listOf(CategoryUnreadCount(1, 2)))
+        every { repository.getStarredCount() } returns flowOf(5)
         every { repository.getEntries(any(), any(), any(), any(), any()) } returns flowOf(testEntries)
         every { repository.getEntryById(101) } returns flowOf(testEntries[0])
         every { repository.getEntryById(102) } returns flowOf(testEntries[1])
@@ -296,6 +297,67 @@ class MinifluxMainViewModelTest {
 
             assertEquals("starred", state.statusFilter)
             assertEquals(false, state.showOnlyUnreadFeeds)
+        }
+    }
+
+    @Test
+    fun `selectBookmarks updates statusFilter to starred and clears selections`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+
+        viewModel.selectCategory(1L)
+        viewModel.selectFeed(10L)
+        viewModel.selectBookmarks()
+
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+
+            assertEquals("starred", state.statusFilter)
+            assertNull(state.selectedCategory)
+            assertNull(state.selectedFeed)
+            assertEquals(5, state.starredCount)
+        }
+    }
+
+    @Test
+    fun `selectFeed, selectCategory, and selectAllUnread reset statusFilter to unread`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+
+        // First select bookmarks -> statusFilter becomes "starred"
+        viewModel.selectBookmarks()
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals("starred", expectMostRecentItem().statusFilter)
+        }
+
+        // Then select feed -> statusFilter must reset to "unread"
+        viewModel.selectFeed(10L)
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals("unread", state.statusFilter)
+            assertEquals(10L, state.selectedFeed?.id)
+        }
+
+        // Select bookmarks again, then select category -> statusFilter must reset to "unread"
+        viewModel.selectBookmarks()
+        viewModel.selectCategory(1L)
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals("unread", state.statusFilter)
+            assertEquals(1L, state.selectedCategory?.id)
+        }
+
+        // Select bookmarks again, then select all unread -> statusFilter must reset to "unread"
+        viewModel.selectBookmarks()
+        viewModel.selectAllUnread()
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals("unread", state.statusFilter)
+            assertNull(state.selectedCategory)
+            assertNull(state.selectedFeed)
         }
     }
 

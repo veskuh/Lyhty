@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,10 +57,8 @@ import androidx.compose.ui.platform.testTag
 fun EntryListPane(
     entries: List<EntryEntity>,
     selectedEntry: EntryEntity?,
-    statusFilter: String?,
     searchQuery: String,
     onSelectEntry: (EntryEntity) -> Unit,
-    onSetStatusFilter: (String?) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -160,51 +157,6 @@ fun EntryListPane(
                 },
                 singleLine = true
             )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Status Filter Chips
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = statusFilter == "unread",
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSetStatusFilter("unread")
-                    },
-                    label = {
-                        Text(if (statusFilter == "unread") "Unread (${entries.size})" else "Unread")
-                    }
-                )
-                FilterChip(
-                    selected = statusFilter == "starred",
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSetStatusFilter("starred")
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    label = {
-                        Text(if (statusFilter == "starred") "Starred (${entries.size})" else "Starred")
-                    }
-                )
-                FilterChip(
-                    selected = statusFilter == null,
-                    onClick = {
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSetStatusFilter(null)
-                    },
-                    label = {
-                        Text(if (statusFilter == null) "All Entries (${entries.size})" else "All Entries")
-                    }
-                )
-            }
 
             Spacer(modifier = Modifier.height(12.dp))
 

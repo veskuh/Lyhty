@@ -188,4 +188,33 @@ class CategoryFeedTreePaneTest {
         composeTestRule.onNodeWithText("Mark feed as read").performClick()
         assertEquals(10L, markFeedCalled)
     }
+
+    @Test
+    fun `categoryFeedTreePane renders Bookmarks item and handles click`() {
+        var bookmarksClicked = false
+
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(CategoryEntity(1, "Tech")),
+                feeds = listOf(FeedEntity(10, "TechCrunch", categoryId = 1)),
+                selectedCategory = null,
+                selectedFeed = null,
+                starredCount = 7,
+                statusFilter = "unread",
+                unreadCountsByFeed = mapOf(10L to 3),
+                unreadCountsByCategory = mapOf(1L to 3),
+                showOnlyUnreadFeeds = true,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onSelectBookmarks = { bookmarksClicked = true },
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
+        composeTestRule.onNodeWithText("7").assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("Bookmarks").performClick()
+        assertTrue(bookmarksClicked)
+    }
 }

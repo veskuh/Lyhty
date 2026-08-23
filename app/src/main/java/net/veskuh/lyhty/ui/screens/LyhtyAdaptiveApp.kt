@@ -159,6 +159,8 @@ fun LyhtyAdaptiveApp(
                         selectedEntry = uiState.selectedEntry,
                         unreadCountsByCategory = uiState.unreadCountsByCategory,
                         unreadCountsByFeed = uiState.unreadCountsByFeed,
+                        starredCount = uiState.starredCount,
+                        statusFilter = uiState.statusFilter,
                         showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                         readerTheme = uiState.readerTheme,
                         onSelectCategory = { category ->
@@ -169,6 +171,17 @@ fun LyhtyAdaptiveApp(
                             isSettingsOpen = false
                             viewModel.selectFeed(feed)
                         },
+                        onSelectAllUnread = {
+                            isSettingsOpen = false
+                            viewModel.selectAllUnread()
+                        },
+                        onSelectBookmarks = {
+                            isSettingsOpen = false
+                            viewModel.selectBookmarks()
+                        },
+                        onMarkCategoryAsRead = { categoryId -> viewModel.markCategoryAsRead(categoryId) },
+                        onMarkFeedAsRead = { feedId -> viewModel.markFeedAsRead(feedId) },
+                        onMarkAllAsRead = { viewModel.markAllAsRead() },
                         onSync = { viewModel.refreshAll() },
                         onOpenSettings = { isSettingsOpen = true },
                         modifier = Modifier.weight(0.75f)
@@ -194,12 +207,10 @@ fun LyhtyAdaptiveApp(
                             EntryListPane(
                                 entries = uiState.entries,
                                 selectedEntry = uiState.selectedEntry,
-                                statusFilter = uiState.statusFilter,
                                 searchQuery = uiState.searchQuery,
                                 onSelectEntry = { entry ->
                                     viewModel.selectEntry(entry.id)
                                 },
-                                onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
                                 onSearchQueryChange = { query -> viewModel.setSearchQuery(query) }
                             )
                         }
@@ -228,6 +239,8 @@ fun LyhtyAdaptiveApp(
                                     selectedEntry = uiState.selectedEntry,
                                     unreadCountsByCategory = uiState.unreadCountsByCategory,
                                     unreadCountsByFeed = uiState.unreadCountsByFeed,
+                                    starredCount = uiState.starredCount,
+                                    statusFilter = uiState.statusFilter,
                                     showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                                     readerTheme = uiState.readerTheme,
                                     onSelectCategory = { category ->
@@ -236,6 +249,14 @@ fun LyhtyAdaptiveApp(
                                     },
                                     onSelectFeed = { feed ->
                                         viewModel.selectFeed(feed)
+                                        navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
+                                    },
+                                    onSelectAllUnread = {
+                                        viewModel.selectAllUnread()
+                                        navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
+                                    },
+                                    onSelectBookmarks = {
+                                        viewModel.selectBookmarks()
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
                                     onMarkCategoryAsRead = { categoryId -> viewModel.markCategoryAsRead(categoryId) },
@@ -261,13 +282,11 @@ fun LyhtyAdaptiveApp(
                                     EntryListPane(
                                         entries = uiState.entries,
                                         selectedEntry = uiState.selectedEntry,
-                                        statusFilter = uiState.statusFilter,
                                         searchQuery = uiState.searchQuery,
                                         onSelectEntry = { entry ->
                                             viewModel.selectEntry(entry.id)
                                             navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, entry.id)
                                         },
-                                        onSetStatusFilter = { filter -> viewModel.setStatusFilter(filter) },
                                         onSearchQueryChange = { query -> viewModel.setSearchQuery(query) },
                                         onBack = {
                                             if (navigator.canNavigateBack()) {
