@@ -56,13 +56,17 @@ fun LyhtyAdaptiveApp(
     val navigator = rememberListDetailPaneScaffoldNavigator<Long>()
 
     var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    // Single-Pane / Settings Back Gesture Handler
-    BackHandler(enabled = isSettingsOpen || uiState.selectedEntry != null || navigator.canNavigateBack()) {
+    // Single-Pane / Settings / Search Back Gesture Handler
+    BackHandler(enabled = isSettingsOpen || isSearchActive || uiState.selectedEntry != null || navigator.canNavigateBack()) {
         if (isSettingsOpen) {
             isSettingsOpen = false
+        } else if (isSearchActive) {
+            isSearchActive = false
+            viewModel.setSearchQuery("")
         } else if (uiState.selectedEntry != null) {
             viewModel.selectEntry(null)
         } else if (navigator.canNavigateBack()) {
@@ -147,7 +151,6 @@ fun LyhtyAdaptiveApp(
 
             val windowAdaptiveInfo = currentWindowAdaptiveInfo()
             val isExpandedWindow = windowAdaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
-            var isSearchActive by remember { mutableStateOf(false) }
 
             if (isExpandedWindow) {
                 // Unfolded Dual-Pane Layout: Left = Categories Tree (pinned), Right = Articles / Reader / Settings
