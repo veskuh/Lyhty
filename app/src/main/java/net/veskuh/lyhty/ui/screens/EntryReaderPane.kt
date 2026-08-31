@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,7 +109,7 @@ fun EntryReaderPane(
         val entryCache = remember { mutableStateMapOf<Long, EntryEntity>() }
         entryCache[entry.id] = entry
 
-        val scrollState = remember(entry.id) { ScrollState(initial = 0) }
+        val scrollState = rememberSaveable(entry.id, saver = ScrollState.Saver) { ScrollState(initial = 0) }
         val rawProgress = if (scrollState.maxValue > 0) scrollState.value.toFloat() / scrollState.maxValue.toFloat() else 0f
         val animatedProgress by animateFloatAsState(
             targetValue = rawProgress.coerceIn(0f, 1f),

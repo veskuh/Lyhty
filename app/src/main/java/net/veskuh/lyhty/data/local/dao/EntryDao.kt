@@ -1,10 +1,9 @@
 package net.veskuh.lyhty.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -36,7 +35,7 @@ interface EntryDao {
     @Query("SELECT COUNT(*) FROM entries WHERE starred = 1")
     fun getStarredCount(): Flow<Int>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertEntriesRaw(entries: List<EntryEntity>)
 
     @Transaction

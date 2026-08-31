@@ -55,6 +55,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.EntryEntity
 import net.veskuh.lyhty.data.local.entity.FeedEntity
@@ -73,6 +79,7 @@ fun CategoryFeedTreePane(
     statusFilter: String? = "unread",
     showOnlyUnreadFeeds: Boolean = true,
     readerTheme: ReaderTheme = ReaderTheme.OLED_DARK,
+    isLoading: Boolean = false,
     onSelectCategory: (CategoryEntity?) -> Unit,
     onSelectFeed: (FeedEntity?) -> Unit,
     onSelectAllUnread: (() -> Unit)? = null,
@@ -383,6 +390,30 @@ fun CategoryFeedTreePane(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Bottom Toolbar with Sync, Search & Settings Buttons
+            val syncRotation = remember { Animatable(0f) }
+            LaunchedEffect(isLoading) {
+                if (isLoading) {
+                    while (true) {
+                        syncRotation.snapTo(0f)
+                        syncRotation.animateTo(
+                            targetValue = 360f,
+                            animationSpec = tween(durationMillis = 1400, easing = LinearEasing)
+                        )
+                    }
+                } else {
+                    val current = syncRotation.value
+                    if (current in 1f..359f) {
+                        val remaining = 360f - current
+                        val duration = ((remaining / 360f) * 600).toInt().coerceAtLeast(150)
+                        syncRotation.animateTo(
+                            targetValue = 360f,
+                            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    syncRotation.snapTo(0f)
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -390,10 +421,14 @@ fun CategoryFeedTreePane(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onSync) {
+                IconButton(
+                    onClick = onSync,
+                    enabled = !isLoading
+                ) {
                     Icon(
                         imageVector = Icons.Default.Sync,
-                        contentDescription = "Refresh Feeds"
+                        contentDescription = if (isLoading) "Refreshing Feeds..." else "Refresh Feeds",
+                        modifier = if (isLoading) Modifier.graphicsLayer { rotationZ = syncRotation.value } else Modifier
                     )
                 }
 

@@ -42,6 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -57,6 +60,20 @@ fun LyhtyAdaptiveApp(
 
     var isSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LifecycleEventEffect(
+        event = Lifecycle.Event.ON_STOP,
+        lifecycleOwner = lifecycleOwner
+    ) {
+        viewModel.onAppBackgrounded()
+    }
+    LifecycleEventEffect(
+        event = Lifecycle.Event.ON_START,
+        lifecycleOwner = lifecycleOwner
+    ) {
+        viewModel.onAppForegrounded()
+    }
 
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -167,6 +184,7 @@ fun LyhtyAdaptiveApp(
                         statusFilter = uiState.statusFilter,
                         showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                         readerTheme = uiState.readerTheme,
+                        isLoading = uiState.isLoading,
                         onSelectCategory = { category ->
                             isSettingsOpen = false
                             isSearchActive = false
@@ -265,6 +283,7 @@ fun LyhtyAdaptiveApp(
                                     statusFilter = uiState.statusFilter,
                                     showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
                                     readerTheme = uiState.readerTheme,
+                                    isLoading = uiState.isLoading,
                                     onSelectCategory = { category ->
                                         isSearchActive = false
                                         viewModel.setSearchQuery("")
