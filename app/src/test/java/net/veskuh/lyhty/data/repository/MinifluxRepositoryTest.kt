@@ -267,4 +267,33 @@ class MinifluxRepositoryTest {
         assertEquals(101L, retainedEntry?.id)
         assertEquals("read", retainedEntry?.status)
     }
+
+    @Test
+    fun `recordHistory, getHistoryEntries, and getHistoryCount track reading history`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries(status = "unread")
+
+        assertEquals(0, repository.getHistoryCount().first())
+
+        // Record history for 101 then 102
+        repository.recordHistory(101L)
+        repository.recordHistory(102L)
+
+        assertEquals(2, repository.getHistoryCount().first())
+
+        val history = repository.getHistoryEntries().first()
+        assertEquals(2, history.size)
+        // Most recently recorded (102) is first
+        assertEquals(102L, history[0].id)
+        assertEquals(101L, history[1].id)
+
+        // Clear history
+        repository.clearHistory()
+        assertEquals(0, repository.getHistoryCount().first())
+        assertTrue(repository.getHistoryEntries().first().isEmpty())
+
+        // Entries themselves still exist in Room
+        val entries = repository.getEntries().first()
+        assertEquals(2, entries.size)
+    }
 }

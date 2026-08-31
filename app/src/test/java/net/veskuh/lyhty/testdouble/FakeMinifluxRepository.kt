@@ -8,6 +8,7 @@ import net.veskuh.lyhty.data.local.model.FeedUnreadCount
 import net.veskuh.lyhty.data.repository.MinifluxRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 class FakeMinifluxRepository : MinifluxRepository {
@@ -46,6 +47,8 @@ class FakeMinifluxRepository : MinifluxRepository {
             )
         )
     )
+
+    private val historyState = MutableStateFlow<List<Long>>(emptyList())
 
     override fun getCategories(): Flow<List<CategoryEntity>> = categoriesState
     override fun getFeeds(): Flow<List<FeedEntity>> = feedsState
@@ -93,6 +96,23 @@ class FakeMinifluxRepository : MinifluxRepository {
                     it.author.contains(query, ignoreCase = true)
             }
         }
+
+    override fun getHistoryEntries(limit: Int, offset: Int): Flow<List<EntryEntity>> =
+        combine(entriesState, historyState) { entries, historyIds ->
+            val entriesMap = entries.associateBy { it.id }
+            historyIds.mapNotNull { entriesMap[it] }.drop(offset).take(limit)
+        }
+
+    override fun getHistoryCount(): Flow<Int> =
+        historyState.map { it.size }
+
+    override suspend fun recordHistory(entryId: Long) {
+        historyState.value = listOf(entryId) + historyState.value.filter { it != entryId }
+    }
+
+    override suspend fun clearHistory() {
+        historyState.value = emptyList()
+    }
 
     override suspend fun syncCategoriesAndFeeds() {}
     override suspend fun syncEntries(status: String?, offset: Int, limit: Int) {}
@@ -153,5 +173,6 @@ class FakeMinifluxRepository : MinifluxRepository {
         categoriesState.value = emptyList()
         feedsState.value = emptyList()
         entriesState.value = emptyList()
+        historyState.value = emptyList()
     }
 }

@@ -126,4 +126,31 @@ class RoomDatabaseTest {
         assertEquals(101L, postSyncEntry?.id)
         assertEquals("read", postSyncEntry?.status)
     }
+
+    @Test
+    fun `historyDao records, queries in descending order, counts, and clears history`() = runTest {
+        val category = CategoryEntity(1, "Tech")
+        val feed = FeedEntity(10, "TechCrunch", categoryId = 1)
+        val entry1 = EntryEntity(id = 101, feedId = 10, categoryId = 1, title = "A1", status = "read")
+        val entry2 = EntryEntity(id = 102, feedId = 10, categoryId = 1, title = "A2", status = "read")
+
+        database.categoryDao().insertCategories(listOf(category))
+        database.feedDao().insertFeeds(listOf(feed))
+        database.entryDao().upsertEntriesWithFts(listOf(entry1, entry2))
+
+        assertEquals(0, database.historyDao().getHistoryCount().first())
+
+        database.historyDao().recordHistory(net.veskuh.lyhty.data.local.entity.ReadingHistoryEntity(101, readAt = 1000L))
+        database.historyDao().recordHistory(net.veskuh.lyhty.data.local.entity.ReadingHistoryEntity(102, readAt = 2000L))
+
+        assertEquals(2, database.historyDao().getHistoryCount().first())
+
+        val history = database.historyDao().getHistoryEntries().first()
+        assertEquals(2, history.size)
+        assertEquals(102L, history[0].id)
+        assertEquals(101L, history[1].id)
+
+        database.historyDao().clearHistory()
+        assertEquals(0, database.historyDao().getHistoryCount().first())
+    }
 }

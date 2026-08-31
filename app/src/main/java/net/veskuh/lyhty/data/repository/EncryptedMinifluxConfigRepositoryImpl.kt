@@ -52,7 +52,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
     override suspend fun saveConfig(serverUrl: String, apiKey: String) {
         val cleanUrl = serverUrl.trim()
         val cleanKey = apiKey.trim()
-        LyhtyLogger.error("ConfigRepo", "saveConfig called -> URL: '$cleanUrl', Key length: ${cleanKey.length}")
+        LyhtyLogger.debug("ConfigRepo", "saveConfig called -> URL: '$cleanUrl', Key length: ${cleanKey.length}")
 
         prefs.edit()
             .putString("KEY_SERVER_URL", cleanUrl)
@@ -99,7 +99,7 @@ class EncryptedMinifluxConfigRepositoryImpl @Inject constructor(
 
     override fun getApiKeySync(): String {
         val key = (prefs.getString("KEY_API_KEY", "") ?: "").trim()
-        LyhtyLogger.error("ConfigRepo", "getApiKeySync -> key length: ${key.length}")
+        LyhtyLogger.debug("ConfigRepo", "getApiKeySync -> key length: ${key.length}")
         return key
     }
 

@@ -209,6 +209,12 @@ fun LyhtyAdaptiveApp(
                             viewModel.setSearchQuery("")
                             viewModel.selectBookmarks()
                         },
+                        onSelectHistory = {
+                            isSettingsOpen = false
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
+                            viewModel.selectHistory()
+                        },
                         onOpenSearch = {
                             isSettingsOpen = false
                             viewModel.selectEntry(null)
@@ -242,6 +248,7 @@ fun LyhtyAdaptiveApp(
                             EntryListPane(
                                 entries = uiState.entries,
                                 selectedEntry = uiState.selectedEntry,
+                                statusFilter = uiState.statusFilter,
                                 searchQuery = uiState.searchQuery,
                                 isSearchActive = isSearchActive,
                                 onSelectEntry = { entry ->
@@ -308,6 +315,12 @@ fun LyhtyAdaptiveApp(
                                         viewModel.selectBookmarks()
                                         navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
                                     },
+                                    onSelectHistory = {
+                                        isSearchActive = false
+                                        viewModel.setSearchQuery("")
+                                        viewModel.selectHistory()
+                                        navigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
+                                    },
                                     onOpenSearch = {
                                         viewModel.selectEntry(null)
                                         isSearchActive = true
@@ -336,6 +349,7 @@ fun LyhtyAdaptiveApp(
                                     EntryListPane(
                                         entries = uiState.entries,
                                         selectedEntry = uiState.selectedEntry,
+                                        statusFilter = uiState.statusFilter,
                                         searchQuery = uiState.searchQuery,
                                         isSearchActive = isSearchActive,
                                         onSelectEntry = { entry ->
@@ -379,6 +393,7 @@ private fun BoundSettingsPane(
         fontSizeScale = uiState.fontSizeScale,
         readerTheme = uiState.readerTheme,
         showOnlyUnreadFeeds = uiState.showOnlyUnreadFeeds,
+        historyCount = uiState.historyCount,
         isLoading = uiState.isLoading,
         hasError = uiState.currentError != null,
         onSaveConfig = { url, key -> viewModel.updateServerConfig(url, key) },
@@ -386,6 +401,7 @@ private fun BoundSettingsPane(
         onSetTheme = { theme -> viewModel.setReaderTheme(theme) },
         onSetFontSizeScale = { scale -> viewModel.setFontSizeScale(scale) },
         onSetShowOnlyUnreadFeeds = { showUnread -> viewModel.setShowOnlyUnreadFeeds(showUnread) },
+        onClearHistory = { viewModel.clearHistory() },
         onBack = onClose
     )
 }

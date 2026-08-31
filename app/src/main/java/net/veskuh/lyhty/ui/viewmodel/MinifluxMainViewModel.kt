@@ -76,14 +76,15 @@ class MinifluxMainViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             _currentError.value = null
-            net.veskuh.lyhty.util.LyhtyLogger.error("ViewModel", "updateServerConfig called -> URL: '$serverUrl', Key length: ${apiKey.length}")
+            net.veskuh.lyhty.util.LyhtyLogger.info("ViewModel", "updateServerConfig called -> URL: '$serverUrl', Key length: ${apiKey.length}")
             try {
                 configRepository?.saveConfig(serverUrl, apiKey)
                 repository.clearLocalDatabase()
                 repository.syncCategoriesAndFeeds()
                 repository.syncEntries("starred")
-                if (_statusFilter.value != "starred") {
-                    repository.syncEntries(_statusFilter.value)
+                val currentFilter = _statusFilter.value
+                if (isServerSyncableStatus(currentFilter)) {
+                    repository.syncEntries(currentFilter)
                 }
             } catch (e: Exception) {
                 handleException(e)
@@ -110,6 +111,7 @@ class MinifluxMainViewModel @Inject constructor(
     private val _unreadCountsFeed = repository.getUnreadCountsByFeed().map { list -> list.associate { it.feedId to it.count } }
     private val _unreadCountsCategory = repository.getUnreadCountsByCategory().map { list -> list.associate { it.categoryId to it.count } }
     private val _starredCount = repository.getStarredCount()
+    private val _historyCount = repository.getHistoryCount()
 
     private val _entries = combine(
         _statusFilter,
@@ -119,10 +121,10 @@ class MinifluxMainViewModel @Inject constructor(
     ) { status, catId, feedId, query ->
         QueryFilterParams(status, catId, feedId, query)
     }.flatMapLatest { params ->
-        if (params.query.isNotBlank()) {
-            repository.searchEntries(params.query)
-        } else {
-            repository.getEntries(params.statusFilter, params.categoryId, params.feedId)
+        when {
+            params.query.isNotBlank() -> repository.searchEntries(params.query)
+            params.statusFilter == "history" -> repository.getHistoryEntries()
+            else -> repository.getEntries(params.statusFilter, params.categoryId, params.feedId)
         }
     }
 
@@ -138,14 +140,21 @@ class MinifluxMainViewModel @Inject constructor(
         if (id != null) repository.getEntryById(id) else flowOf(null)
     }
 
+    private val _countsData = combine(
+        _unreadCountsFeed,
+        _unreadCountsCategory,
+        _starredCount,
+        _historyCount
+    ) { feedCounts, catCounts, starredCount, historyCount ->
+        CountsData(feedCounts, catCounts, starredCount, historyCount)
+    }
+
     private val _feedTreeData = combine(
         _categories,
         _feeds,
-        _unreadCountsFeed,
-        _unreadCountsCategory,
-        _starredCount
-    ) { categories, feeds, feedCounts, catCounts, starredCount ->
-        FeedTreeData(categories, feeds, feedCounts, catCounts, starredCount)
+        _countsData
+    ) { categories, feeds, counts ->
+        FeedTreeData(categories, feeds, counts.feedCounts, counts.catCounts, counts.starredCount, counts.historyCount)
     }
 
     private val _readerPreferences = combine(
@@ -175,7 +184,8 @@ class MinifluxMainViewModel @Inject constructor(
             entries = entries,
             feedCounts = tree.feedCounts,
             catCounts = tree.catCounts,
-            starredCount = tree.starredCount
+            starredCount = tree.starredCount,
+            historyCount = tree.historyCount
         )
     }
 
@@ -225,7 +235,8 @@ class MinifluxMainViewModel @Inject constructor(
             showOnlyUnreadFeeds = s3.showOnlyUnread,
             unreadCountsByFeed = s1.feedCounts,
             unreadCountsByCategory = s1.catCounts,
-            starredCount = s1.starredCount
+            starredCount = s1.starredCount,
+            historyCount = s1.historyCount
         )
     }.stateIn(
         scope = viewModelScope,
@@ -248,6 +259,10 @@ class MinifluxMainViewModel @Inject constructor(
         const val BACKGROUND_REFRESH_THRESHOLD_MS = 30 * 60 * 1000L // 30 minutes
         const val KEY_LAST_BACKGROUND_TIMESTAMP = "key_last_background_timestamp"
         const val KEY_SELECTED_ENTRY_ID = "key_selected_entry_id"
+
+        fun isServerSyncableStatus(status: String?): Boolean {
+            return status != "starred" && status != "history" && status != null
+        }
     }
 
     private var lastBackgroundTimestamp: Long = 0L
@@ -290,8 +305,9 @@ class MinifluxMainViewModel @Inject constructor(
                 repository.flushPendingSyncs()
                 repository.syncCategoriesAndFeeds()
                 repository.syncEntries("starred")
-                if (_statusFilter.value != "starred") {
-                    repository.syncEntries(_statusFilter.value)
+                val currentFilter = _statusFilter.value
+                if (isServerSyncableStatus(currentFilter)) {
+                    repository.syncEntries(currentFilter)
                 }
             } catch (e: Exception) {
                 handleException(e)
@@ -363,6 +379,21 @@ class MinifluxMainViewModel @Inject constructor(
         }
     }
 
+    fun selectHistory() {
+        _selectedCategoryId.value = null
+        _selectedFeedId.value = null
+        _selectedEntryId.value = null
+        savedStateHandle?.remove<Long>(KEY_SELECTED_ENTRY_ID)
+        _statusFilter.value = "history"
+        activeReadingList = emptyList()
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            repository.clearHistory()
+        }
+    }
+
     fun selectEntry(entryId: Long?) {
         _selectedEntryId.value = entryId
         if (entryId == null) {
@@ -370,6 +401,13 @@ class MinifluxMainViewModel @Inject constructor(
             activeReadingList = uiState.value.entries
         } else {
             savedStateHandle?.set(KEY_SELECTED_ENTRY_ID, entryId)
+            viewModelScope.launch {
+                try {
+                    repository.recordHistory(entryId)
+                } catch (e: Exception) {
+                    net.veskuh.lyhty.util.LyhtyLogger.warn("ViewModel", "Failed to record reading history for entry $entryId", e)
+                }
+            }
             if (activeReadingList.isEmpty() || activeReadingList.none { it.id == entryId }) {
                 activeReadingList = uiState.value.entries
             }
@@ -533,12 +571,20 @@ class MinifluxMainViewModel @Inject constructor(
         val query: String
     )
 
+    private data class CountsData(
+        val feedCounts: Map<Long, Int>,
+        val catCounts: Map<Long, Int>,
+        val starredCount: Int,
+        val historyCount: Int
+    )
+
     private data class FeedTreeData(
         val categories: List<CategoryEntity>,
         val feeds: List<FeedEntity>,
         val feedCounts: Map<Long, Int>,
         val catCounts: Map<Long, Int>,
-        val starredCount: Int
+        val starredCount: Int,
+        val historyCount: Int
     )
 
     private data class ReaderPreferences(
@@ -559,7 +605,8 @@ class MinifluxMainViewModel @Inject constructor(
         val entries: List<EntryEntity>,
         val feedCounts: Map<Long, Int>,
         val catCounts: Map<Long, Int>,
-        val starredCount: Int
+        val starredCount: Int,
+        val historyCount: Int
     )
 
     private data class PartialState2(

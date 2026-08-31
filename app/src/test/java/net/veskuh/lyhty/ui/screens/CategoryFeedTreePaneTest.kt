@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.entity.FeedEntity
 import androidx.compose.ui.test.longClick
@@ -128,8 +129,8 @@ class CategoryFeedTreePaneTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Uncategorized").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Orphan Feed").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Uncategorized").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Orphan Feed").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -244,5 +245,32 @@ class CategoryFeedTreePaneTest {
         composeTestRule.onNodeWithContentDescription("Search Articles").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Search Articles").performClick()
         assertTrue(searchClicked)
+    }
+
+    @Test
+    fun `categoryFeedTreePane renders History shortcut without count badge and invokes onSelectHistory`() {
+        var historyClicked = false
+
+        composeTestRule.setContent {
+            CategoryFeedTreePane(
+                categories = listOf(CategoryEntity(1, "Tech")),
+                feeds = listOf(FeedEntity(10, "TechCrunch", categoryId = 1)),
+                selectedCategory = null,
+                selectedFeed = null,
+                starredCount = 0,
+                statusFilter = "unread",
+                unreadCountsByFeed = emptyMap(),
+                unreadCountsByCategory = emptyMap(),
+                showOnlyUnreadFeeds = false,
+                onSelectCategory = {},
+                onSelectFeed = {},
+                onSelectHistory = { historyClicked = true },
+                onSync = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("History").assertIsDisplayed()
+        composeTestRule.onNodeWithText("History").performClick()
+        assertTrue(historyClicked)
     }
 }

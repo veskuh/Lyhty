@@ -276,6 +276,24 @@ class MinifluxRepositoryImpl @Inject constructor(
         database.categoryDao().clearAll()
         database.feedDao().clearAll()
         database.entryDao().clearAll()
+        database.historyDao().clearHistory()
         LyhtyLogger.info("Repository", "Local database successfully cleared.")
+    }
+
+    override fun getHistoryEntries(limit: Int, offset: Int): Flow<List<EntryEntity>> {
+        return database.historyDao().getHistoryEntries(limit = limit, offset = offset)
+    }
+
+    override fun getHistoryCount(): Flow<Int> {
+        return database.historyDao().getHistoryCount()
+    }
+
+    override suspend fun recordHistory(entryId: Long) {
+        database.historyDao().recordHistory(net.veskuh.lyhty.data.local.entity.ReadingHistoryEntity(entryId = entryId, readAt = System.currentTimeMillis()))
+    }
+
+    override suspend fun clearHistory() {
+        LyhtyLogger.info("Repository", "Clearing local reading history...")
+        database.historyDao().clearHistory()
     }
 }

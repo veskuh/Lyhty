@@ -26,7 +26,8 @@ object DatabaseModule {
         )
             .addMigrations(
                 net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_1_2,
-                net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_2_3
+                net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_2_3,
+                net.veskuh.lyhty.data.local.RoomMigrations.MIGRATION_3_4
             )
             .fallbackToDestructiveMigration()
             .build()

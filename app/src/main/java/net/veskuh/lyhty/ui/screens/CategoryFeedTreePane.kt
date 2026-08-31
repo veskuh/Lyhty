@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -84,6 +85,7 @@ fun CategoryFeedTreePane(
     onSelectFeed: (FeedEntity?) -> Unit,
     onSelectAllUnread: (() -> Unit)? = null,
     onSelectBookmarks: (() -> Unit)? = null,
+    onSelectHistory: (() -> Unit)? = null,
     onOpenSearch: (() -> Unit)? = null,
     onMarkCategoryAsRead: ((Long) -> Unit)? = null,
     onMarkFeedAsRead: ((Long) -> Unit)? = null,
@@ -204,7 +206,7 @@ fun CategoryFeedTreePane(
                         // "All Unread" Entry Shortcut
                         item {
                             var showAllMenu by remember { mutableStateOf(false) }
-                            val isAllUnreadSelected = selectedCategory == null && selectedFeed == null && statusFilter != "starred"
+                            val isAllUnreadSelected = selectedCategory == null && selectedFeed == null && (statusFilter == "unread" || statusFilter == null)
                             FeedTreeCard(
                                 title = "All Unread Feeds",
                                 icon = Icons.Default.RssFeed,
@@ -251,6 +253,26 @@ fun CategoryFeedTreePane(
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onSelectBookmarks?.invoke()
+                                }
+                            )
+                        }
+
+                        // "History" Entry Shortcut
+                        item {
+                            val isHistorySelected = selectedCategory == null && selectedFeed == null && statusFilter == "history"
+                            FeedTreeCard(
+                                title = "History",
+                                icon = Icons.Default.History,
+                                unreadCount = 0,
+                                isSelected = isHistorySelected,
+                                containerColor = if (isHistorySelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                },
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onSelectHistory?.invoke()
                                 }
                             )
                         }

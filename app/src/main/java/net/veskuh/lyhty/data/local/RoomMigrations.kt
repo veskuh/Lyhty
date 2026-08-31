@@ -19,4 +19,17 @@ object RoomMigrations {
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_entries_starred` ON `entries` (`starred`)")
         }
     }
+
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS `reading_history` (
+                    `entryId` INTEGER PRIMARY KEY NOT NULL,
+                    `readAt` INTEGER NOT NULL,
+                    FOREIGN KEY(`entryId`) REFERENCES `entries`(`id`) ON DELETE CASCADE
+                )
+            """.trimIndent())
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_reading_history_readAt` ON `reading_history`(`readAt`)")
+        }
+    }
 }
