@@ -8,6 +8,7 @@ import net.veskuh.lyhty.data.local.model.CategoryUnreadCount
 import net.veskuh.lyhty.data.local.model.FeedUnreadCount
 import net.veskuh.lyhty.data.repository.MinifluxRepository
 import net.veskuh.lyhty.ui.state.ReaderTheme
+import net.veskuh.lyhty.util.NetworkMonitor
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -371,6 +372,125 @@ class MinifluxMainViewModelTest {
             val state = expectMostRecentItem()
             assertNotNull(state.errorMessage)
             assertNotNull(state.currentError)
+        }
+    }
+
+    @Test
+    fun `onAppForegrounded does not trigger refresh when backgrounded for less than 30 minutes`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Clear invocations from init
+        io.mockk.clearMocks(repository, answers = false)
+
+        val baseTime = 1_000_000L
+        viewModel.onAppBackgrounded(timestampMs = baseTime)
+
+        // Return to foreground 10 minutes later (< 30 min)
+        viewModel.onAppForegrounded(currentTimestampMs = baseTime + 10 * 60 * 1000L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 0) { repository.syncCategoriesAndFeeds() }
+    }
+
+    @Test
+    fun `onAppForegrounded triggers refreshAll when backgrounded for 30 minutes or more`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Clear invocations from init
+        io.mockk.clearMocks(repository, answers = false)
+
+        val baseTime = 1_000_000L
+        viewModel.onAppBackgrounded(timestampMs = baseTime)
+
+        // Return to foreground 30 minutes later (>= 30 min)
+        viewModel.onAppForegrounded(currentTimestampMs = baseTime + 30 * 60 * 1000L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(atLeast = 1) { repository.syncCategoriesAndFeeds() }
+        coVerify(atLeast = 1) { repository.syncEntries("starred") }
+    }
+
+    @Test
+    fun `onAppForegrounded does not trigger refresh when offline even if backgrounded for over 30 minutes`() = runTest {
+        val networkMonitor: NetworkMonitor = mockk()
+        every { networkMonitor.isOnline } returns kotlinx.coroutines.flow.MutableStateFlow(false)
+
+        val viewModel = MinifluxMainViewModel(
+            repository = repository,
+            networkMonitor = networkMonitor
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        io.mockk.clearMocks(repository, answers = false)
+
+        val baseTime = 1_000_000L
+        viewModel.onAppBackgrounded(timestampMs = baseTime)
+
+        // Return to foreground 45 minutes later while offline
+        viewModel.onAppForegrounded(currentTimestampMs = baseTime + 45 * 60 * 1000L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 0) { repository.syncCategoriesAndFeeds() }
+    }
+
+    @Test
+    fun `onAppForegrounded recovers background timestamp from SavedStateHandle after ViewModel reconstruction`() = runTest {
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle()
+        val baseTime = 1_000_000L
+        savedStateHandle.set(MinifluxMainViewModel.KEY_LAST_BACKGROUND_TIMESTAMP, baseTime)
+
+        val viewModel = MinifluxMainViewModel(
+            repository = repository,
+            savedStateHandle = savedStateHandle
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        io.mockk.clearMocks(repository, answers = false)
+
+        // Return to foreground 35 minutes later
+        viewModel.onAppForegrounded(currentTimestampMs = baseTime + 35 * 60 * 1000L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(atLeast = 1) { repository.syncCategoriesAndFeeds() }
+        assertNull(savedStateHandle.get<Long>(MinifluxMainViewModel.KEY_LAST_BACKGROUND_TIMESTAMP))
+    }
+
+    @Test
+    fun `selected entry is not reset when refreshAll runs`() = runTest {
+        val entry = testEntries.first()
+        val viewModel = MinifluxMainViewModel(repository)
+
+        viewModel.selectEntry(entry.id)
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(entry.id, expectMostRecentItem().selectedEntry?.id)
+        }
+
+        // Trigger refresh
+        viewModel.refreshAll()
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(entry.id, expectMostRecentItem().selectedEntry?.id)
+        }
+    }
+
+    @Test
+    fun `selected entry is restored from SavedStateHandle upon ViewModel initialization`() = runTest {
+        val entry = testEntries.first()
+        val savedStateHandle = androidx.lifecycle.SavedStateHandle()
+        savedStateHandle.set(MinifluxMainViewModel.KEY_SELECTED_ENTRY_ID, entry.id)
+
+        val viewModel = MinifluxMainViewModel(
+            repository = repository,
+            savedStateHandle = savedStateHandle
+        )
+
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals(entry.id, state.selectedEntry?.id)
         }
     }
 }

@@ -1,9 +1,8 @@
 package net.veskuh.lyhty.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
 import net.veskuh.lyhty.data.local.model.CategoryUnreadCount
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +13,7 @@ interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY title ASC")
     fun getCategories(): Flow<List<CategoryEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertCategories(categories: List<CategoryEntity>)
 
     @Query("DELETE FROM categories WHERE id = :categoryId")

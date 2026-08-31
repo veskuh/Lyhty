@@ -1,5 +1,6 @@
 package net.veskuh.lyhty.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import net.veskuh.lyhty.data.local.entity.CategoryEntity
@@ -30,7 +31,8 @@ import net.veskuh.lyhty.util.NetworkMonitor
 class MinifluxMainViewModel @Inject constructor(
     private val repository: MinifluxRepository,
     private val configRepository: MinifluxConfigRepository? = null,
-    private val networkMonitor: NetworkMonitor? = null
+    private val networkMonitor: NetworkMonitor? = null,
+    private val savedStateHandle: SavedStateHandle? = null
 ) : ViewModel() {
 
     val isOnline: StateFlow<Boolean> = networkMonitor?.isOnline ?: MutableStateFlow(true)
@@ -94,7 +96,7 @@ class MinifluxMainViewModel @Inject constructor(
     private val _statusFilter = MutableStateFlow<String?>("unread")
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     private val _selectedFeedId = MutableStateFlow<Long?>(null)
-    private val _selectedEntryId = MutableStateFlow<Long?>(null)
+    private val _selectedEntryId = MutableStateFlow<Long?>(savedStateHandle?.get<Long>(KEY_SELECTED_ENTRY_ID))
     private val _searchQuery = MutableStateFlow("")
     private val _readerTheme = MutableStateFlow(configRepository?.getReaderThemeSync() ?: ReaderTheme.OLED_DARK)
     private val _fontSizeScale = MutableStateFlow(configRepository?.getFontSizeScaleSync() ?: 1.0f)
@@ -242,6 +244,43 @@ class MinifluxMainViewModel @Inject constructor(
         }
     }
 
+    companion object {
+        const val BACKGROUND_REFRESH_THRESHOLD_MS = 30 * 60 * 1000L // 30 minutes
+        const val KEY_LAST_BACKGROUND_TIMESTAMP = "key_last_background_timestamp"
+        const val KEY_SELECTED_ENTRY_ID = "key_selected_entry_id"
+    }
+
+    private var lastBackgroundTimestamp: Long = 0L
+
+    fun onAppBackgrounded(timestampMs: Long = System.currentTimeMillis()) {
+        lastBackgroundTimestamp = timestampMs
+        savedStateHandle?.set(KEY_LAST_BACKGROUND_TIMESTAMP, timestampMs)
+        net.veskuh.lyhty.util.LyhtyLogger.debug("ViewModel", "App backgrounded at $timestampMs")
+    }
+
+    fun onAppForegrounded(currentTimestampMs: Long = System.currentTimeMillis()) {
+        val bgTime = lastBackgroundTimestamp.takeIf { it > 0L }
+            ?: savedStateHandle?.get<Long>(KEY_LAST_BACKGROUND_TIMESTAMP)
+            ?: 0L
+
+        lastBackgroundTimestamp = 0L
+        savedStateHandle?.remove<Long>(KEY_LAST_BACKGROUND_TIMESTAMP)
+
+        if (bgTime > 0L) {
+            val elapsed = currentTimestampMs - bgTime
+            if (elapsed >= BACKGROUND_REFRESH_THRESHOLD_MS) {
+                if (isOnline.value) {
+                    net.veskuh.lyhty.util.LyhtyLogger.info("ViewModel", "App foregrounded after ${elapsed / 60000}m in background (>= 30m) -> auto-refreshing feeds")
+                    refreshAll()
+                } else {
+                    net.veskuh.lyhty.util.LyhtyLogger.info("ViewModel", "App foregrounded after ${elapsed / 60000}m in background (>= 30m) but offline -> will refresh upon reconnection")
+                }
+            } else {
+                net.veskuh.lyhty.util.LyhtyLogger.debug("ViewModel", "App foregrounded after ${elapsed / 1000}s in background (< 30m) -> skip auto-refresh")
+            }
+        }
+    }
+
     fun refreshAll() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -274,6 +313,7 @@ class MinifluxMainViewModel @Inject constructor(
         _selectedCategoryId.value = categoryId
         _selectedFeedId.value = null
         _selectedEntryId.value = null
+        savedStateHandle?.remove<Long>(KEY_SELECTED_ENTRY_ID)
         _statusFilter.value = "unread"
         activeReadingList = emptyList()
     }
@@ -285,6 +325,7 @@ class MinifluxMainViewModel @Inject constructor(
     fun selectFeed(feedId: Long?) {
         _selectedFeedId.value = feedId
         _selectedEntryId.value = null
+        savedStateHandle?.remove<Long>(KEY_SELECTED_ENTRY_ID)
         _statusFilter.value = "unread"
         activeReadingList = emptyList()
         if (feedId != null) {
@@ -303,6 +344,7 @@ class MinifluxMainViewModel @Inject constructor(
         _selectedCategoryId.value = null
         _selectedFeedId.value = null
         _selectedEntryId.value = null
+        savedStateHandle?.remove<Long>(KEY_SELECTED_ENTRY_ID)
         _statusFilter.value = "unread"
         activeReadingList = emptyList()
     }
@@ -311,6 +353,7 @@ class MinifluxMainViewModel @Inject constructor(
         _selectedCategoryId.value = null
         _selectedFeedId.value = null
         _selectedEntryId.value = null
+        savedStateHandle?.remove<Long>(KEY_SELECTED_ENTRY_ID)
         _statusFilter.value = "starred"
         activeReadingList = emptyList()
         viewModelScope.launch {
@@ -323,8 +366,10 @@ class MinifluxMainViewModel @Inject constructor(
     fun selectEntry(entryId: Long?) {
         _selectedEntryId.value = entryId
         if (entryId == null) {
+            savedStateHandle?.remove<Long>(KEY_SELECTED_ENTRY_ID)
             activeReadingList = uiState.value.entries
         } else {
+            savedStateHandle?.set(KEY_SELECTED_ENTRY_ID, entryId)
             if (activeReadingList.isEmpty() || activeReadingList.none { it.id == entryId }) {
                 activeReadingList = uiState.value.entries
             }

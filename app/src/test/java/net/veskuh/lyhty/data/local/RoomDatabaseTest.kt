@@ -93,4 +93,37 @@ class RoomDatabaseTest {
         assertEquals(2, feedCounts[0].count)
         assertEquals(2, categoryCounts[0].count)
     }
+
+    @Test
+    fun `insertCategories and insertFeeds using Upsert do not cascade delete existing read entries`() = runTest {
+        val category = CategoryEntity(1, "Tech")
+        val feed = FeedEntity(10, "TechCrunch", categoryId = 1)
+        val entry = EntryEntity(
+            id = 101,
+            feedId = 10,
+            categoryId = 1,
+            title = "Article 1",
+            content = "Content",
+            status = "read",
+            starred = false
+        )
+
+        database.categoryDao().insertCategories(listOf(category))
+        database.feedDao().insertFeeds(listOf(feed))
+        database.entryDao().upsertEntriesWithFts(listOf(entry))
+
+        // Ensure entry exists and is read
+        val initialEntry = database.entryDao().getEntryById(101).first()
+        assertEquals("read", initialEntry?.status)
+
+        // Simulate subsequent sync of categories & feeds
+        database.categoryDao().insertCategories(listOf(CategoryEntity(1, "Tech Updated")))
+        database.feedDao().insertFeeds(listOf(FeedEntity(10, "TechCrunch Updated", categoryId = 1)))
+
+        // Verify entry was NOT deleted by foreign key cascade
+        val postSyncEntry = database.entryDao().getEntryById(101).first()
+        org.junit.Assert.assertNotNull("Read entry must not be deleted when categories/feeds sync", postSyncEntry)
+        assertEquals(101L, postSyncEntry?.id)
+        assertEquals("read", postSyncEntry?.status)
+    }
 }

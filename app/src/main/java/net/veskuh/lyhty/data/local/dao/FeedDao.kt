@@ -1,9 +1,8 @@
 package net.veskuh.lyhty.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import net.veskuh.lyhty.data.local.entity.FeedEntity
 import net.veskuh.lyhty.data.local.model.FeedUnreadCount
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +13,7 @@ interface FeedDao {
     @Query("SELECT * FROM feeds ORDER BY title ASC")
     fun getFeeds(): Flow<List<FeedEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertFeeds(feeds: List<FeedEntity>)
 
     @Query("DELETE FROM feeds WHERE id = :feedId")

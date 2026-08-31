@@ -247,4 +247,24 @@ class MinifluxRepositoryTest {
         simulatedServer.enqueueError(500, "Server Error")
         repository.fetchServerFullText(999L)
     }
+
+    @Test
+    fun `syncCategoriesAndFeeds does not wipe read non-starred entries from database`() = runTest {
+        repository.syncCategoriesAndFeeds()
+        repository.syncEntries(status = "unread")
+
+        // Mark entry 101 as read (not starred)
+        repository.markEntryAsRead(101L)
+        val readEntry = repository.getEntryById(101L).first()
+        assertEquals("read", readEntry?.status)
+
+        // Run syncCategoriesAndFeeds again (e.g. during refreshAll)
+        repository.syncCategoriesAndFeeds()
+
+        // Verify entry 101 is still in database and readable
+        val retainedEntry = repository.getEntryById(101L).first()
+        org.junit.Assert.assertNotNull("Read entry must not be wiped by syncCategoriesAndFeeds", retainedEntry)
+        assertEquals(101L, retainedEntry?.id)
+        assertEquals("read", retainedEntry?.status)
+    }
 }
