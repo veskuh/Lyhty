@@ -24,6 +24,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -551,5 +552,36 @@ class MinifluxMainViewModelTest {
         coVerify(exactly = 1) { repository.syncCategoriesAndFeeds() }
         coVerify(exactly = 1) { repository.syncEntries("starred") }
         coVerify(exactly = 0) { repository.syncEntries("history") }
+    }
+
+    @Test
+    fun `isLocalCacheReady emits true once local database flows emit`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+
+        viewModel.isLocalCacheReady.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertTrue(expectMostRecentItem())
+        }
+    }
+
+    @Test
+    fun `initial uiState seeds preferences synchronously from configRepository`() = runTest {
+        val configRepo: net.veskuh.lyhty.data.repository.MinifluxConfigRepository = mockk(relaxed = true) {
+            every { getReaderThemeSync() } returns net.veskuh.lyhty.ui.state.ReaderTheme.SEPIA
+            every { getFontSizeScaleSync() } returns 1.25f
+            every { getShowOnlyUnreadFeedsSync() } returns false
+            every { getServerUrlSync() } returns "https://example.com"
+            every { getApiKeySync() } returns "key"
+            every { getLogLevelSync() } returns net.veskuh.lyhty.util.LogLevel.DEBUG
+        }
+
+        val viewModel = MinifluxMainViewModel(
+            repository = repository,
+            configRepository = configRepo
+        )
+
+        assertEquals(net.veskuh.lyhty.ui.state.ReaderTheme.SEPIA, viewModel.uiState.value.readerTheme)
+        assertEquals(1.25f, viewModel.uiState.value.fontSizeScale)
+        assertEquals(false, viewModel.uiState.value.showOnlyUnreadFeeds)
     }
 }

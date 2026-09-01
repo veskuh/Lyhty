@@ -15,7 +15,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -213,6 +215,9 @@ class MinifluxMainViewModel @Inject constructor(
         )
     }
 
+    private val _isLocalCacheReady = MutableStateFlow(false)
+    val isLocalCacheReady: StateFlow<Boolean> = _isLocalCacheReady.asStateFlow()
+
     val uiState: StateFlow<MinifluxUiState> = combine(
         _subState1,
         _subState2,
@@ -241,10 +246,21 @@ class MinifluxMainViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = MinifluxUiState(isLoading = true)
+        initialValue = MinifluxUiState(
+            isLoading = true,
+            readerTheme = configRepository?.getReaderThemeSync() ?: ReaderTheme.OLED_DARK,
+            fontSizeScale = configRepository?.getFontSizeScaleSync() ?: 1.0f,
+            showOnlyUnreadFeeds = configRepository?.getShowOnlyUnreadFeedsSync() ?: true
+        )
     )
 
     init {
+        viewModelScope.launch {
+            kotlinx.coroutines.withTimeoutOrNull(1000L) {
+                combine(_categories, _feeds, _countsData) { _, _, _ -> true }.first()
+            }
+            _isLocalCacheReady.value = true
+        }
         refreshAll()
     }
 
