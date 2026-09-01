@@ -36,4 +36,9 @@ interface MinifluxRepository {
     suspend fun fetchServerFullText(entryId: Long): String
     suspend fun flushPendingSyncs()
     suspend fun clearLocalDatabase()
+
+    fun getHistoryEntries(limit: Int = 100, offset: Int = 0): Flow<List<EntryEntity>>
+    fun getHistoryCount(): Flow<Int>
+    suspend fun recordHistory(entryId: Long)
+    suspend fun clearHistory()
 }

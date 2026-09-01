@@ -23,6 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Public
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,10 +44,12 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -80,6 +85,7 @@ fun SettingsPane(
     fontSizeScale: Float,
     readerTheme: ReaderTheme,
     showOnlyUnreadFeeds: Boolean = true,
+    historyCount: Int = 0,
     isLoading: Boolean = false,
     hasError: Boolean = false,
     onSaveConfig: (String, String) -> Unit,
@@ -87,6 +93,7 @@ fun SettingsPane(
     onSetTheme: (ReaderTheme) -> Unit,
     onSetFontSizeScale: (Float) -> Unit,
     onSetShowOnlyUnreadFeeds: ((Boolean) -> Unit)? = null,
+    onClearHistory: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -99,6 +106,7 @@ fun SettingsPane(
 
     var urlValidationError by remember { mutableStateOf<String?>(null) }
     var showConfirmationDialog by remember { mutableStateOf(false) }
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
     var isSavingServerConfig by remember { mutableStateOf(false) }
 
     LaunchedEffect(isLoading, hasError) {
@@ -431,7 +439,80 @@ fun SettingsPane(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- SECTION 3: Diagnostics & Utilities ---
+                    // --- SECTION 3: Reading History ---
+                    Text(
+                        text = "Reading History",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val historyText = when (historyCount) {
+                                    0 -> "No reading history recorded"
+                                    1 -> "1 article in reading history"
+                                    else -> "$historyCount articles in reading history"
+                                }
+                                Text(
+                                    text = historyText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            if (historyCount > 0 && onClearHistory != null) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                OutlinedButton(
+                                    onClick = { showClearHistoryDialog = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.DeleteSweep, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Clear Reading History")
+                                }
+                            }
+                        }
+                    }
+
+                    if (showClearHistoryDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showClearHistoryDialog = false },
+                            title = { Text("Clear Reading History?") },
+                            text = { Text("This will remove all recorded reading history from this device. Your articles and unread/read status on the server will not be changed.") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showClearHistoryDialog = false
+                                        onClearHistory?.invoke()
+                                        android.widget.Toast.makeText(context, "Reading history cleared", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showClearHistoryDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- SECTION 4: Diagnostics & Utilities ---
                     Text(
                         text = "Diagnostics & System",
                         style = MaterialTheme.typography.titleMedium,

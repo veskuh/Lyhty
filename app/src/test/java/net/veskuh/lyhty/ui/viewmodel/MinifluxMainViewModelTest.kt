@@ -65,6 +65,10 @@ class MinifluxMainViewModelTest {
         every { repository.getUnreadCountsByFeed() } returns flowOf(listOf(FeedUnreadCount(10, 2)))
         every { repository.getUnreadCountsByCategory() } returns flowOf(listOf(CategoryUnreadCount(1, 2)))
         every { repository.getStarredCount() } returns flowOf(5)
+        every { repository.getHistoryCount() } returns flowOf(3)
+        every { repository.getHistoryEntries(any(), any()) } returns flowOf(testEntries)
+        coEvery { repository.recordHistory(any()) } returns Unit
+        coEvery { repository.clearHistory() } returns Unit
         every { repository.getEntries(any(), any(), any(), any(), any()) } returns flowOf(testEntries)
         every { repository.getEntryById(101) } returns flowOf(testEntries[0])
         every { repository.getEntryById(102) } returns flowOf(testEntries[1])
@@ -492,5 +496,60 @@ class MinifluxMainViewModelTest {
             val state = expectMostRecentItem()
             assertEquals(entry.id, state.selectedEntry?.id)
         }
+    }
+
+    @Test
+    fun `selectHistory sets statusFilter to history and loads history count`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+
+        viewModel.selectHistory()
+        viewModel.uiState.test {
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
+            assertEquals("history", state.statusFilter)
+            assertEquals(3, state.historyCount)
+            assertNull(state.selectedCategory)
+            assertNull(state.selectedFeed)
+        }
+    }
+
+    @Test
+    fun `selectEntry records reading history in repository`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.selectEntry(101L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(atLeast = 1) { repository.recordHistory(101L) }
+    }
+
+    @Test
+    fun `clearHistory invokes repository clearHistory`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.clearHistory()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(atLeast = 1) { repository.clearHistory() }
+    }
+
+    @Test
+    fun `refreshAll does not call syncEntries with history when history is selected`() = runTest {
+        val viewModel = MinifluxMainViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.selectHistory()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        io.mockk.clearMocks(repository, answers = false)
+
+        viewModel.refreshAll()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 1) { repository.syncCategoriesAndFeeds() }
+        coVerify(exactly = 1) { repository.syncEntries("starred") }
+        coVerify(exactly = 0) { repository.syncEntries("history") }
     }
 }

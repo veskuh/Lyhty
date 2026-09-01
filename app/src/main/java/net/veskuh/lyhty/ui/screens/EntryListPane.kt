@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.testTag
 fun EntryListPane(
     entries: List<EntryEntity>,
     selectedEntry: EntryEntity?,
+    statusFilter: String? = "unread",
     searchQuery: String = "",
     isSearchActive: Boolean = false,
     onSelectEntry: (EntryEntity) -> Unit,
@@ -179,8 +180,14 @@ fun EntryListPane(
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                     }
+                    val headerText = when {
+                        searchQuery.isNotBlank() -> "Search Results"
+                        statusFilter == "starred" -> "Bookmarks"
+                        statusFilter == "history" -> "Reading History"
+                        else -> "Articles"
+                    }
                     Text(
-                        text = if (searchQuery.isNotBlank()) "Search Results" else "Articles",
+                        text = headerText,
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -194,8 +201,14 @@ fun EntryListPane(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+                    val emptyText = when {
+                        searchQuery.isNotBlank() -> "No articles matching '$searchQuery'"
+                        statusFilter == "starred" -> "No bookmarked articles"
+                        statusFilter == "history" -> "No reading history yet. Articles you read will appear here."
+                        else -> "No articles available"
+                    }
                     Text(
-                        text = if (searchQuery.isNotBlank()) "No articles matching '$searchQuery'" else "No articles available",
+                        text = emptyText,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )

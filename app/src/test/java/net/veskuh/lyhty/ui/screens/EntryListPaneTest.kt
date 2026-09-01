@@ -158,4 +158,34 @@ class EntryListPaneTest {
 
         assertTrue(backCalled)
     }
+
+    @Test
+    fun `entryListPane renders Reading History header and empty state when statusFilter is history`() {
+        composeTestRule.setContent {
+            EntryListPane(
+                entries = emptyList(),
+                selectedEntry = null,
+                statusFilter = "history",
+                onSelectEntry = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Reading History").assertIsDisplayed()
+        composeTestRule.onNodeWithText("No reading history yet. Articles you read will appear here.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `entryListPane renders Bookmarks header and empty state when statusFilter is starred`() {
+        composeTestRule.setContent {
+            EntryListPane(
+                entries = emptyList(),
+                selectedEntry = null,
+                statusFilter = "starred",
+                onSelectEntry = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText("Bookmarks").assertIsDisplayed()
+        composeTestRule.onNodeWithText("No bookmarked articles").assertIsDisplayed()
+    }
 }

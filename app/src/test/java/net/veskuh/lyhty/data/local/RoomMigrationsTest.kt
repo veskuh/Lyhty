@@ -29,4 +29,16 @@ class RoomMigrationsTest {
             mockDb.execSQL("CREATE INDEX IF NOT EXISTS `index_entries_starred` ON `entries` (`starred`)")
         }
     }
+
+    @Test
+    fun `MIGRATION_3_4 executes valid DDL statement for reading_history table and index`() {
+        val mockDb: SupportSQLiteDatabase = mockk(relaxed = true)
+
+        RoomMigrations.MIGRATION_3_4.migrate(mockDb)
+
+        verify {
+            mockDb.execSQL(match { it.contains("CREATE TABLE IF NOT EXISTS `reading_history`") })
+            mockDb.execSQL("CREATE INDEX IF NOT EXISTS `index_reading_history_readAt` ON `reading_history`(`readAt`)")
+        }
+    }
 }
