@@ -106,10 +106,28 @@ object LyhtyLogger {
 
     fun getLogFile(): File? = logFile
 
+    @Synchronized
     fun readLogContent(): String {
         return logFile?.takeIf { it.exists() }?.readText() ?: "No log file entries found."
     }
 
+    @Synchronized
+    fun readRecentLogs(maxLines: Int = 100): String {
+        val file = logFile ?: return "No log file available."
+        if (!file.exists()) return "No diagnostic log entries recorded yet."
+        return try {
+            val lines = file.readLines()
+            if (lines.isEmpty()) {
+                "No diagnostic log entries recorded yet."
+            } else {
+                lines.takeLast(maxLines).joinToString("\n")
+            }
+        } catch (_: Exception) {
+            "Unable to read diagnostic log file."
+        }
+    }
+
+    @Synchronized
     fun clearLogs() {
         logFile?.let {
             if (it.exists()) it.writeText("")
