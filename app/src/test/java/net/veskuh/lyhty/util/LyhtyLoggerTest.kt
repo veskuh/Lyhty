@@ -47,4 +47,27 @@ class LyhtyLoggerTest {
         assertEquals(LogLevel.ERROR, LogLevel.fromName("error"))
         assertEquals(LogLevel.INFO, LogLevel.fromName("nonexistent"))
     }
+
+    @Test
+    fun `readRecentLogs returns last N lines correctly`() {
+        LyhtyLogger.setLogLevel(LogLevel.VERBOSE)
+        for (i in 1..10) {
+            LyhtyLogger.info("TestTag", "Line $i")
+        }
+
+        val recent5 = LyhtyLogger.readRecentLogs(5)
+        val lines = recent5.lines()
+        assertEquals(5, lines.size)
+        assertTrue(lines.last().contains("Line 10"))
+        assertTrue(lines.first().contains("Line 6"))
+    }
+
+    @Test
+    fun `clearLogs empties the log file and returns fallback message`() {
+        LyhtyLogger.info("TestTag", "Message to clear")
+        assertTrue(LyhtyLogger.readRecentLogs(10).contains("Message to clear"))
+
+        LyhtyLogger.clearLogs()
+        assertEquals("No diagnostic log entries recorded yet.", LyhtyLogger.readRecentLogs(10))
+    }
 }

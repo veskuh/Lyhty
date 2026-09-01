@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,11 +21,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Palette
@@ -34,6 +40,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -60,16 +67,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import net.veskuh.lyhty.ui.state.ReaderTheme
 import androidx.compose.material3.Switch
@@ -94,10 +102,12 @@ fun SettingsPane(
     onSetFontSizeScale: (Float) -> Unit,
     onSetShowOnlyUnreadFeeds: ((Boolean) -> Unit)? = null,
     onClearHistory: (() -> Unit)? = null,
+    onClearLogs: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val scrollState = rememberScrollState()
 
     var serverUrl by remember(initialServerUrl) { mutableStateOf(initialServerUrl) }
@@ -107,6 +117,9 @@ fun SettingsPane(
     var urlValidationError by remember { mutableStateOf<String?>(null) }
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
+    var showClearLogsDialog by remember { mutableStateOf(false) }
+    var showLogPreviewDialog by remember { mutableStateOf(false) }
+    var previewLogText by remember { mutableStateOf("") }
     var isSavingServerConfig by remember { mutableStateOf(false) }
 
     LaunchedEffect(isLoading, hasError) {
@@ -604,7 +617,121 @@ fun SettingsPane(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Share Diagnostic Logs")
                             }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedButton(
+                                onClick = {
+                                    previewLogText = LyhtyLogger.readRecentLogs(100)
+                                    showLogPreviewDialog = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Description, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Preview Latest Logs")
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedButton(
+                                onClick = { showClearLogsDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(Icons.Default.DeleteOutline, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Clear Diagnostic Logs")
+                            }
                         }
+                    }
+
+                    if (showClearLogsDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showClearLogsDialog = false },
+                            title = { Text("Clear Diagnostic Logs?") },
+                            text = { Text("This will permanently delete all diagnostic log entries currently stored on this device.") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showClearLogsDialog = false
+                                        (onClearLogs ?: { LyhtyLogger.clearLogs() }).invoke()
+                                        android.widget.Toast.makeText(context, "Diagnostic logs cleared", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showClearLogsDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
+
+                    if (showLogPreviewDialog) {
+                        val verticalScroll = rememberScrollState()
+                        val horizontalScroll = rememberScrollState()
+
+                        AlertDialog(
+                            onDismissRequest = { showLogPreviewDialog = false },
+                            title = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Latest Logs (100 lines)")
+                                }
+                            },
+                            text = {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 120.dp, max = 360.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(8.dp)
+                                            .verticalScroll(verticalScroll)
+                                            .horizontalScroll(horizontalScroll)
+                                    ) {
+                                        SelectionContainer {
+                                            Text(
+                                                text = previewLogText,
+                                                fontFamily = FontFamily.Monospace,
+                                                fontSize = 11.sp,
+                                                lineHeight = 15.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        clipboardManager.setText(AnnotatedString(previewLogText))
+                                        android.widget.Toast.makeText(context, "Logs copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Copy")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showLogPreviewDialog = false }) {
+                                    Text("Close")
+                                }
+                            }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
